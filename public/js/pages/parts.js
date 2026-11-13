@@ -1,5 +1,5 @@
-import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy, partUrl, canonical } from '../core.js';
-import { icon, vehiclePicker, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, antiSpam } from '../components.js';
+import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy, partUrl, canonical, getTypes } from '../core.js';
+import { typeSuggest, matchTypes, icon, vehiclePicker, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, antiSpam } from '../components.js';
 
 // Lista dijelova; /dijelovi?make=&model=&gen=&q=&city=&sort=
 export async function partsPage({ el, query, params }) {
@@ -17,7 +17,7 @@ export async function partsPage({ el, query, params }) {
     <div class="row"><h1 style="padding-left:12px">${heading}</h1></div>
     <form id="pf" class="stack" style="gap:10px" role="search">
       <div id="pp" class="stack" style="gap:10px"></div>
-      <label class="f"><span>Dio ili kataloški broj</span><input name="q" value="${q.q || ''}" placeholder="far, branik, 5G0941005…" autocomplete="off"></label>
+      <label class="f"><span>Dio ili kataloški broj</span><input name="q" value="${q.q || ''}" placeholder="far, branik, 5G0941005…" autocomplete="off"></label><input type="hidden" name="type" value="${q.type || ''}">
       <label class="f"><span>Grad</span>${await citySelect('city', q.city)}</label>
       <button class="btn accent big block">${icon('search', 20)} Pretraži</button>
       ${q.make || q.q || q.city || q.sort ? html`<a href="/dijelovi" class="reset-link">Poništi pretragu</a>` : ''}
@@ -36,8 +36,9 @@ export async function partsPage({ el, query, params }) {
   const search = () => {
     const v = picker.get();
     const f = formData($('#pf', el));
-    go('/dijelovi' + qs({ make: v.make, model: v.model, gen: v.gen, q: f.q.trim(), city: f.city, sort: $('#ps', el).value }));
+    go('/dijelovi' + qs({ make: v.make, model: v.model, gen: v.gen, q: f.q.trim(), type: f.type, city: f.city, sort: $('#ps', el).value }));
   };
+  typeSuggest($('#pf input[name=q]', el), $('#pf input[name=type]', el), () => search());
   $('#pf', el).onsubmit = e => { e.preventDefault(); search(); };
   $('#ps', el).onchange = search;
 
@@ -49,6 +50,7 @@ export async function partsPage({ el, query, params }) {
         <span class="dot">${icon('car', 20, '#1B1E22')}</span><div><strong>${vr.total} ${vr.total === 1 ? 'vozilo' : 'vozila'} ovog modela na otpadima</strong><span>Pitaj otpad za bilo koji dio</span></div>${icon('right', 20)}</a>`);
     }
   }
+  const types = await getTypes();
   await pagedList({
     box: $('#pl', el), query,
     fetch: page => api('/api/parts' + qs({ ...q, stranica: undefined, page })),
@@ -56,7 +58,8 @@ export async function partsPage({ el, query, params }) {
       $('#pc', el).textContent = `${total} ${total === 1 ? 'oglas' : 'oglasa'}`;
       if (items.length) return html`<div class="list cols">${items.map(p => partRow(p))}</div>`;
       const v = picker.get();
-      return html`<div class="empty"><strong>Nema takvih dijelova</strong>Pošalji „Tražim dio“ — otpadi koji ga imaju javiće ti se sa cijenom.
+      const near = q.q && !q.type ? matchTypes(types, q.q, 4) : [];
+      return html`${near.length ? html`<div class="card" style="margin-bottom:10px">Možda tražiš: ${near.map((t, i) => html`${i ? ', ' : ''}<a href="/dijelovi${qs({ ...q, q: t.t, type: t.id, stranica: undefined })}"><strong>${t.t}</strong></a>`)}</div>` : ''}<div class="empty"><strong>Nema takvih dijelova</strong>Pošalji „Tražim dio“ — otpadi koji ga imaju javiće ti se sa cijenom.
         <div style="margin-top:14px"><a class="btn dark" href="/trazim/novi${qs({ make: v.make, model: v.model, gen: v.gen, part: q.q })}">${icon('send', 18, '#fff')} Tražim ovaj dio</a></div></div>`;
     },
   });

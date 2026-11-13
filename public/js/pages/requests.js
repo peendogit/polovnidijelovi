@@ -1,5 +1,5 @@
 import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy, loadMe } from '../core.js';
-import { icon, vehiclePicker, requestRow, citySelect, pagedList, contactButtons, verifiedBadge, imageInput, suggestModel, confirmBox, gallery, bindGallery, bindYear, engineSelect } from '../components.js';
+import { typeSuggest, icon, vehiclePicker, requestRow, citySelect, pagedList, contactButtons, verifiedBadge, imageInput, suggestModel, confirmBox, gallery, bindGallery, bindYear, engineSelect } from '../components.js';
 
 export async function requestsPage({ el, query: q }) {
   setTitle('Tražim dio');
@@ -62,6 +62,7 @@ export async function newRequestPage({ el, query: q }) {
   </form>`);
   const picker = await vehiclePicker($('#np', el), { make: q.make, model: q.model, gen: q.gen }, { anyText: 'Izaberi marku' });
   const imgs = imageInput($('#ni', el), [], 3);
+  typeSuggest($('input[name=part]', el), null);
   bindYear($('#np', el), picker, $('#nr select[name=year]', el), q.year);
   $('#nomodel', el).onclick = () => { $('#mtxt', el).hidden = false; const v = picker.get(); suggestModel(v.make, v.makeName); };
   $('#nr', el).onsubmit = async e => {

@@ -1,5 +1,5 @@
 import { html, raw, render, $, api, go, qs, setTitle, formData, fail, toast, state, busy, getMeta, partUrl } from '../core.js';
-import { icon, vehiclePicker, imageInput, suggestModel, citySelect, bindYear, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES } from '../components.js';
+import { typeSuggest, icon, vehiclePicker, imageInput, suggestModel, citySelect, bindYear, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES } from '../components.js';
 
 // "1.6 TDI" -> "1.6" (za padajući meni)
 const engNum = e => (String(e || '').match(/\d[.,]\d/) || [''])[0].replace(',', '.');
@@ -20,10 +20,6 @@ export async function postChoosePage({ el }) {
   </div>`);
 }
 
-const PARTS = ['Far prednji lijevi', 'Far prednji desni', 'Štop lijevi', 'Štop desni', 'Prednji branik', 'Zadnji branik', 'Hauba', 'Gepek vrata', 'Vrata prednja lijeva', 'Vrata prednja desna',
-  'Vrata zadnja lijeva', 'Vrata zadnja desna', 'Blatobran lijevi', 'Blatobran desni', 'Retrovizor lijevi', 'Retrovizor desni', 'Motor', 'Mjenjač', 'Alnaser', 'Alternator', 'Kompresor klime',
-  'Turbina', 'Brizgaljka', 'Pumpa visokog pritiska', 'EGR ventil', 'Hladnjak vode', 'Hladnjak klime', 'Interkuler', 'Ventilator', 'Kočiona čeljust', 'Amortizer', 'Vilica', 'Poluosovina',
-  'Volan', 'Airbag volana', 'Kontrolna tabla', 'Računar motora', 'Radio', 'Navigacija', 'Sjedišta', 'Felne', 'Vjetrobransko staklo', 'Podizač stakla', 'Brava vrata', 'Rezervoar', 'Lajsne'];
 
 export async function partFormPage({ el, params, query }) {
   if (!state.user) return needLogin();
@@ -54,8 +50,8 @@ export async function partFormPage({ el, params, query }) {
     </div>
     <div class="card stack">
       <strong>Dio</strong>
-      <label class="f req"><span>Naziv dijela</span><input name="title" list="partNames" required maxlength="120" value="${p.title || ''}" placeholder="npr. Far prednji lijevi"></label>
-      <datalist id="partNames">${PARTS.map(x => html`<option value="${x}">`)}</datalist>
+      <label class="f req"><span>Naziv dijela</span><input name="title" required maxlength="120" value="${p.title || ''}" placeholder="počni kucati: far, branik…"></label>
+      <input type="hidden" name="type_id" value="${p.type_id || ''}">
       <div class="grid2">
         <label class="f"><span>Kataloški broj</span><input name="part_no" value="${p.part_no || ''}" placeholder="nije obavezno"></label>
         <label class="f"><span>Strana</span><select name="side"><option value="">—</option>${['lijevo', 'desno', 'prednje', 'zadnje', 'prednje lijevo', 'prednje desno', 'zadnje lijevo', 'zadnje desno'].map(s => html`<option ${p.side === s ? raw('selected') : ''}>${s}</option>`)}</select></label>
@@ -76,6 +72,7 @@ export async function partFormPage({ el, params, query }) {
 
   const picker = await vehiclePicker($('#vp', el), { make: src.make_id, model: src.model_name, gen: src.model_id }, { genRequired: true, anyText: 'Izaberi marku' });
   const imgs = imageInput($('#pi', el), p.images || []);
+  typeSuggest($('input[name=title]', el), $('input[name=type_id]', el));
   bindYear($('#vp', el), picker, $('#pf select[name=year]', el), src.year);
   $('#nomodel', el).onclick = () => { $('#mtxt', el).hidden = false; const v = picker.get(); suggestModel(v.make, v.makeName); };
   $('#vsel', el)?.addEventListener('change', async e => {

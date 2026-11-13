@@ -1,5 +1,5 @@
 // Dijelovi interfejsa koji se ponavljaju
-import { html, raw, render, $, $$, api, esc, km, ago, intlPhone, thumb, getMakes, getMeta, toast, fail, busy, state, pushOverlay, nav, listCache, pageKey, qs, partUrl, vehicleUrl, pwa, isIOS } from './core.js';
+import { html, raw, render, $, $$, api, esc, km, ago, intlPhone, thumb, getMakes, getMeta, getTypes, toast, fail, busy, state, pushOverlay, nav, listCache, pageKey, qs, partUrl, vehicleUrl, pwa, isIOS } from './core.js';
 
 // ---------- ikone (stroke SVG) ----------
 const P = {
@@ -570,4 +570,70 @@ export async function installApp() {
     <li>Gore desno klikni <strong>⋮</strong> (tri tačke).</li>
     <li>Izaberi <strong>„Install app“</strong> / <strong>„Instaliraj aplikaciju“</strong> (ili „Dodaj na početni ekran“).</li></ol>
     <button class="btn dark block" data-close style="margin-top:16px">Razumijem</button>`);
+}
+
+// ---------- tipovi dijelova: prijedlozi dok kucaš (i kad je pogrešno napisano) ----------
+const nrm = s => String(s || '').toLowerCase().replace(/[čć]/g, 'c').replace(/đ/g, 'dj').replace(/š/g, 's').replace(/ž/g, 'z').replace(/[^a-z0-9]+/g, ' ').trim();
+function lev(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  }
+  return d[a.length][b.length];
+}
+// najbliži tipovi za upisani tekst
+export function matchTypes(types, text, max = 8) {
+  const q = nrm(text);
+  if (q.length < 2) return [];
+  const qw = q.split(' ');
+  const out = [];
+  for (const t of types) {
+    const n = t._n || (t._n = nrm(t.t)), tw = t._w || (t._w = n.split(' '));
+    let sc = 0, ok = true;
+    for (const w of qw) {
+      if (tw.some(x => x.startsWith(w))) sc += 3;
+      else if (w.length >= 3 && n.includes(w)) sc += 2;
+      else if (w.length >= 4 && tw.some(x => lev(w, x.slice(0, w.length)) <= (w.length >= 7 ? 2 : 1))) sc += 1; // greška u kucanju
+      else { ok = false; break; }
+    }
+    if (!ok) continue;
+    if (n.startsWith(q)) sc += 2;
+    if (tw[0].startsWith(qw[0])) sc += 1;
+    out.push({ t, sc });
+  }
+  return out.sort((a, b) => b.sc - a.sc || a.t.t.length - b.t.t.length).slice(0, max).map(x => x.t);
+}
+// prijedlozi ispod polja; hidden = skriveno polje za id tipa (nije obavezno)
+export async function typeSuggest(input, hidden, onPick) {
+  const types = await getTypes();
+  const wrap = document.createElement('div');
+  wrap.className = 'sugg-wrap';
+  input.parentNode.insertBefore(wrap, input); wrap.appendChild(input);
+  const box = document.createElement('div');
+  box.className = 'sugg'; box.hidden = true; box.setAttribute('role', 'listbox');
+  wrap.appendChild(box);
+  input.setAttribute('autocomplete', 'off');
+  let list = [], idx = -1;
+  const close = () => { box.hidden = true; idx = -1; };
+  const pick = t => { input.value = t.t; if (hidden) hidden.value = t.id; close(); onPick?.(t); };
+  const draw = () => {
+    list = matchTypes(types, input.value);
+    if (!list.length || document.activeElement !== input) return close();
+    box.innerHTML = list.map((t, i) => html`<button type="button" role="option" class="${i === idx ? 'on' : ''}" data-i="${i}"><span>${t.t}</span><small>${t.g}</small></button>`.s).join('');
+    box.hidden = false;
+  };
+  input.addEventListener('input', () => { if (hidden) hidden.value = ''; idx = -1; draw(); });
+  input.addEventListener('focus', draw);
+  input.addEventListener('blur', () => setTimeout(close, 150));
+  input.addEventListener('keydown', e => {
+    if (box.hidden) return;
+    if (e.key === 'ArrowDown') { idx = Math.min(list.length - 1, idx + 1); draw(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { idx = Math.max(-1, idx - 1); draw(); e.preventDefault(); }
+    else if (e.key === 'Enter' && idx >= 0) { pick(list[idx]); e.preventDefault(); }
+    else if (e.key === 'Escape') close();
+  });
+  box.addEventListener('mousedown', e => e.preventDefault());
+  box.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b) pick(list[Number(b.dataset.i)]); });
 }

@@ -1,6 +1,6 @@
 // Service worker: omogućava instalaciju aplikacije i brže otvaranje.
 // Uvijek prvo pita server (da se vide najnoviji oglasi), a keš koristi samo kad nema interneta.
-const V = 'pd-v2';
+const V = 'pd-v3';
 const SHELL = ['/', '/app.css', '/js/app.js', '/js/core.js', '/js/components.js', '/manifest.webmanifest', '/icons/icon-192.png', '/favicon.svg'];
 
 self.addEventListener('install', e => {

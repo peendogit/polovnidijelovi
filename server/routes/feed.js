@@ -9,6 +9,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { app } from '../router.js';
 import { get, run, all, tx, UPLOAD_DIR } from '../db.js';
+import { findType } from '../types.js';
 import { COLORS, upper, gearsInt, HttpError, bad, str, int, num, bool, imgList, normalize, rateLimit } from '../lib.js';
 
 function feedUser(req) {
@@ -112,14 +113,15 @@ app.post('/api/feed/parts', ({ req, body }) => {
       if (!ext || !title) { errors.push({ ext_id: ext, error: 'nema ext_id ili naziva' }); continue; }
       const m = resolveModel(it);
       const veh = it.vehicle_ext_id ? get('SELECT id FROM vehicles WHERE user_id=? AND ext_id=?', u.id, String(it.vehicle_ext_id)) : null;
+      const type = findType(it.type || title);
       const d = {
-        title, make_id: m?.make_id || null, model_id: m?.id || null, model_text: m?.id ? null : str(m?.name || it.model || it.make, 80),
+        title, type_id: type?.id || null, make_id: m?.make_id || null, model_id: m?.id || null, model_text: m?.id ? null : str(m?.name || it.model || it.make, 80),
         year: int(it.year), fuel: str(it.fuel, 30), engine: str(it.engine, 40), part_no: str(it.part_no, 60), side: str(it.side, 30), color: COLORS.includes(it.color) ? it.color : null, color_code: str(it.color_code, 20),
         condition: ['polovno', 'novo', 'oštećeno'].includes(it.condition) ? it.condition : (bool(it.damaged) ? 'oštećeno' : 'polovno'),
         price: num(it.price), negotiable: bool(it.negotiable), description: str(it.description, 4000),
         city: str(it.city, 60) || u.city, images: imgList(it.images, true), vehicle_id: veh?.id || null,
       };
-      d.search = normalize([title, d.part_no, d.engine, d.description, it.make, it.model].join(' '));
+      d.search = normalize([title, type?.title, d.part_no, d.engine, d.description, it.make, it.model].join(' '));
       upsert('parts', u, ext, d); ok++;
     }
   });

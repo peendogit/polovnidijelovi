@@ -10,6 +10,7 @@ import { HttpError, parseCookies, userFromToken, COLOR_MERGE } from './lib.js';
 import { routes } from './router.js';
 import { renderIndex, sitemap } from './seo.js';
 import { mailEnabled } from './mail.js';
+import './types.js';
 import './routes/auth.js';
 import './routes/catalog.js';
 import './routes/parts.js';

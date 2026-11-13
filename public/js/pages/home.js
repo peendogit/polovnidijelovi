@@ -1,5 +1,5 @@
 import { html, render, $, api, go, qs, setTitle, state } from '../core.js';
-import { icon, vehiclePicker, partRow, vehicleCard, vehicleRow, requestRow } from '../components.js';
+import { typeSuggest, icon, vehiclePicker, partRow, vehicleCard, vehicleRow, requestRow } from '../components.js';
 
 export async function homePage({ el }) {
   setTitle('');
@@ -9,7 +9,7 @@ export async function homePage({ el }) {
     <p class="lead">Izaberi auto, nađi dio, pozovi prodavca.</p>
     <form class="card search-card" id="hs" role="search">
       <div id="hp" class="stack" style="gap:10px"></div>
-      <label class="f"><span>Dio</span><input name="q" placeholder="far, branik, mjenjač…" autocomplete="off"></label>
+      <label class="f"><span>Dio</span><input name="q" placeholder="far, branik, mjenjač…" autocomplete="off"></label><input type="hidden" name="type">
       <button class="btn accent big block">Pretraži</button>
     </form>
   </section>
@@ -29,11 +29,12 @@ export async function homePage({ el }) {
   <div id="hl"><div class="loading">Učitavam…</div></div>`);
 
   const picker = await vehiclePicker($('#hp', el), {});
+  typeSuggest($('#hs input[name=q]', el), $('#hs input[name=type]', el));
   $('#hs', el).onsubmit = e => {
     e.preventDefault();
     const v = picker.get();
     const f = e.target;
-    go('/dijelovi' + qs({ make: v.make, model: v.model, gen: v.gen, q: f.q.value.trim() }));
+    go('/dijelovi' + qs({ make: v.make, model: v.model, gen: v.gen, q: f.q.value.trim(), type: f.type.value }));
   };
 
   const d = await api('/api/home');

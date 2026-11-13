@@ -2,9 +2,10 @@
 import { app } from '../router.js';
 import { all, get, run } from '../db.js';
 import { COLORS, upper, bad, notFound, forbidden, str, int, num, bool, imgList, modelById, vehicleName, normalize, searchWords, rateLimit } from '../lib.js';
+import { findType, typeById } from '../types.js';
 import { vehicleFilter, MODEL_JOIN, MODEL_COLS, sellerOf, fmtVehicleRow, pageArgs, countAndList } from './common.js';
 
-const COLS = `p.id, p.title, p.color, p.color_code, p.price, p.negotiable, p.condition, p.city, p.images, p.year, p.engine, p.fuel, p.side, p.part_no, p.status,
+const COLS = `p.id, p.title, p.type_id, p.color, p.color_code, p.price, p.negotiable, p.condition, p.city, p.images, p.year, p.engine, p.fuel, p.side, p.part_no, p.status,
   p.created_at, p.user_id, p.vehicle_id, p.make_id, p.model_id, p.model_text, u.name seller_name, u.type seller_type, u.verified seller_verified, ${MODEL_COLS}`;
 const FROM = `FROM parts p JOIN users u ON u.id=p.user_id AND u.blocked=0 ${MODEL_JOIN('p')}`;
 
@@ -12,7 +13,12 @@ export function listParts(q, extraWhere = [], extraArgs = []) {
   const [w, a] = vehicleFilter(q, 'p');
   w.unshift("p.status='active'");
   w.push(...extraWhere); a.push(...extraArgs);
-  for (const word of searchWords(q.q)) { w.push('p.search LIKE ?'); a.push(`%${word}%`); }
+  const words = searchWords(q.q);
+  if (q.type && int(q.type)) {
+    // izabran tip iz prijedloga: dijelovi tog tipa ILI dijelovi čiji tekst odgovara (stari oglasi bez tipa)
+    const textCond = words.length ? words.map(() => 'p.search LIKE ?').join(' AND ') : '0';
+    w.push(`(p.type_id=? OR (${textCond}))`); a.push(int(q.type), ...words.map(x => `%${x}%`));
+  } else for (const word of words) { w.push('p.search LIKE ?'); a.push(`%${word}%`); }
   if (q.city) { w.push('p.city=?'); a.push(q.city); }
   if (q.seller) { w.push('p.user_id=?'); a.push(int(q.seller)); }
   if (q.vehicle) { w.push('p.vehicle_id=?'); a.push(int(q.vehicle)); }
@@ -61,15 +67,17 @@ function readPart(body, owner) {
   if (price !== null && (price < 0 || price > 1e6)) throw bad('Provjeri cijenu');
   let vehicle_id = int(body.vehicle_id);
   if (vehicle_id && !get('SELECT 1 x FROM vehicles WHERE id=? AND user_id=?', vehicle_id, user.id)) vehicle_id = null;
+  // tip dijela: izabran iz prijedloga, ili prepoznat iz naziva (nije obavezan)
+  const type = typeById(int(body.type_id)) || findType(title);
   const d = {
-    title, make_id, model_id: m ? m.id : null, model_text: str(body.model_text, 80), year: int(body.year),
+    title, type_id: type?.id || null, make_id, model_id: m ? m.id : null, model_text: str(body.model_text, 80), year: int(body.year),
     fuel: str(body.fuel, 30), engine: str(body.engine, 40), part_no: str(body.part_no, 60), side: str(body.side, 30), color: COLORS.includes(body.color) ? body.color : null, color_code: upper(body.color_code, 20),
     condition: ['polovno', 'novo', 'oštećeno'].includes(body.condition) ? body.condition : 'polovno',
     price, negotiable: bool(body.negotiable), description: str(body.description, 4000), city: owner.city || null,
     images: imgList(body.images), vehicle_id,
   };
   const mk = make_id ? get('SELECT name FROM car_make WHERE id=?', make_id) : null;
-  d.search = normalize([title, d.part_no, d.color_code, d.engine, d.description, mk?.name, m ? vehicleName({ make_name: '', model_name: m.name, generation_name: m.generation_name }) : d.model_text].join(' '));
+  d.search = normalize([title, type?.title, d.part_no, d.color_code, d.engine, d.description, mk?.name, m ? vehicleName({ make_name: '', model_name: m.name, generation_name: m.generation_name }) : d.model_text].join(' '));
   return d;
 }
 

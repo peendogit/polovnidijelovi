@@ -55,6 +55,7 @@ export async function loadMe() {
 }
 export function setMe(r) { state.user = r.user; state.counts = r.counts || {}; listeners.forEach(f => f()); }
 export async function getMeta() { if (!state.meta) state.meta = await api('/api/meta'); return state.meta; }
+export async function getTypes() { if (!state.types) state.types = await api('/api/part-types'); return state.types; }
 export async function getMakes() { if (!state.makes) state.makes = await api('/api/makes'); return state.makes; }
 
 // ---------- poruke ----------

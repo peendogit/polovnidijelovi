@@ -212,3 +212,11 @@ CREATE TABLE IF NOT EXISTS blocklist (
   reason TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- tipovi dijelova (npr. "Far prednji lijevi", grupa "Karoserija - naprijed")
+CREATE TABLE IF NOT EXISTS part_types (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  grp TEXT,
+  norm TEXT NOT NULL UNIQUE
+);

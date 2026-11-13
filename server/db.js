@@ -31,6 +31,16 @@ if (!cols('inquiries').includes('ip')) db.exec('ALTER TABLE inquiries ADD COLUMN
 if (!cols('inquiries').includes('phone_norm')) db.exec('ALTER TABLE inquiries ADD COLUMN phone_norm TEXT');
 db.exec('CREATE INDEX IF NOT EXISTS ix_inq_phone ON inquiries(phone_norm, created_at)');
 if (!cols('inquiries').includes('spam')) db.exec('ALTER TABLE inquiries ADD COLUMN spam INTEGER DEFAULT 0');
+if (!cols('parts').includes('type_id')) db.exec('ALTER TABLE parts ADD COLUMN type_id INTEGER');
+db.exec('CREATE INDEX IF NOT EXISTS ix_parts_type ON parts(type_id)');
+if (!db.prepare('SELECT COUNT(*) c FROM part_types').get().c) {
+  const f = path.join(ROOT, 'data/tipovi-dijelova.json');
+  if (fs.existsSync(f)) {
+    const nrm = s => String(s).toLowerCase().replace(/[čć]/g, 'c').replace(/đ/g, 'dj').replace(/š/g, 's').replace(/ž/g, 'z').replace(/[^a-z0-9]+/g, ' ').trim();
+    const ins = db.prepare('INSERT OR IGNORE INTO part_types (title, grp, norm) VALUES (?,?,?)');
+    db.exec('BEGIN'); for (const t of JSON.parse(fs.readFileSync(f, 'utf8'))) ins.run(t.t, t.g, nrm(t.t)); db.exec('COMMIT');
+  }
+}
 if (!cols('parts').includes('color')) db.exec('ALTER TABLE parts ADD COLUMN color TEXT');
 if (!cols('parts').includes('color_code')) db.exec('ALTER TABLE parts ADD COLUMN color_code TEXT');
 
