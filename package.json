@@ -1,0 +1,15 @@
+{
+  "name": "polovnidijelovi",
+  "version": "1.0.0",
+  "description": "polovnidijelovi.com — polovni auto dijelovi i vozila za dijelove sa otpada (BiH)",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node --no-warnings server/index.js",
+    "admin": "node --no-warnings tools/make-admin.js"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.10.0"
+  }
+}
