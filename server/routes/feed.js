@@ -54,7 +54,7 @@ app.post('/api/feed/vehicles', ({ req, body }) => {
       const d = {
         make_id: m?.make_id || null, model_id: m?.id || null, model_text: m?.id ? null : str([it.make, it.model].filter(Boolean).join(' '), 80),
         year: int(it.year), fuel: str(it.fuel, 30), engine: str(it.engine, 40), engine_code: str(it.engine_code, 20), power_kw: int(it.power_kw),
-        gearbox: str(it.gearbox, 30), color: str(it.color, 30), mileage: int(it.mileage), description: str(it.description, 4000),
+        gearbox: str(it.gearbox, 30), drive: ['prednji', 'zadnji', '4x4'].includes(it.drive) ? it.drive : null, body: str(it.body, 30), color: str(it.color, 30), mileage: int(it.mileage), description: str(it.description, 4000),
         city: str(it.city, 60) || u.city, images: imgList(it.images),
       };
       d.search = normalize([it.make, it.model, d.engine, d.engine_code, d.description].join(' '));

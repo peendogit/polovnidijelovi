@@ -50,7 +50,11 @@ app.post('/api/inquiries/broadcast', ({ user, body, ip }) => {
   // svakom otpadu jedan upit, vezan za jedno njegovo vozilo tog modela
   const targets = all(`SELECT v.user_id, MIN(v.id) vehicle_id FROM vehicles v JOIN users u ON u.id=v.user_id AND u.blocked=0
     WHERE ${w.join(' AND ')} ${user ? 'AND v.user_id<>?' : ''} GROUP BY v.user_id LIMIT 100`, ...a, ...(user ? [user.id] : []));
-  if (!targets.length) throw bad('Trenutno nijedan otpad nema ovaj model. Objavi „Tražim dio“ pa će ti se javiti kad ga dobiju.');
+  if (!targets.length) {
+    const own = user && get(`SELECT 1 x FROM vehicles v WHERE ${w.join(' AND ')} AND v.user_id=?`, ...a, user.id);
+    throw bad(own ? 'Jedino vozilo ovog modela na sajtu je tvoje — nema drugih otpada kojima bi se poslao upit.'
+      : 'Trenutno nijedan otpad nema ovaj model. Objavi „Tražim dio“ pa će ti se javiti kad ga dobiju.');
+  }
   tx(() => {
     for (const t of targets) {
       run('INSERT INTO inquiries (to_user_id, from_user_id, name, phone, vehicle_id, message) VALUES (?,?,?,?,?,?)',

@@ -12,6 +12,10 @@ fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 export const db = await openDb(path.join(DATA_DIR, 'polovnidijelovi.db'));
 db.exec(fs.readFileSync(path.join(ROOT, 'server/schema.sql'), 'utf8'));
 
+// Dopune šeme za postojeće baze
+const cols = t => db.prepare(`PRAGMA table_info(${t})`).all().map(c => c.name);
+if (!cols('vehicles').includes('drive')) db.exec('ALTER TABLE vehicles ADD COLUMN drive TEXT');
+
 // Prvo pokretanje: ubaci marke i modele
 const cnt = db.prepare('SELECT COUNT(*) c FROM car_model').get().c;
 if (!cnt) {

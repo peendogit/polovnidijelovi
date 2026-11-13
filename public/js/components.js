@@ -452,6 +452,13 @@ export function bindYear(pickerBox, picker, sel, value, opts = {}) {
   pickerBox.addEventListener('pick', draw);
   draw();
 }
+export const BODIES = ['limuzina', 'hečbek', 'karavan', 'SUV', 'kupe', 'kabrio', 'monovolumen', 'kombi', 'pickup'];
+export const DRIVES = ['prednji', 'zadnji', '4x4'];
+export const GEARBOXES = ['manuelni', 'automatik'];
+export function optSelect(name, list, value, any = '—') {
+  const v = value || '';
+  return html`<select name="${name}"><option value="">${any}</option>${v && !list.includes(v) ? html`<option selected>${v}</option>` : ''}${list.map(o => html`<option ${o === v ? raw('selected') : ''}>${o}</option>`)}</select>`;
+}
 // Motor (zapremina): 0.7 do 6.0
 export const ENGINES = Array.from({ length: 54 }, (_, i) => (0.7 + i * 0.1).toFixed(1));
 export function engineSelect(name, value, any = '—') {

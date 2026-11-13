@@ -1,5 +1,5 @@
 import { html, raw, render, $, api, go, qs, setTitle, formData, fail, toast, state, busy, getMeta, partUrl } from '../core.js';
-import { icon, vehiclePicker, imageInput, suggestModel, citySelect, bindYear, engineSelect } from '../components.js';
+import { icon, vehiclePicker, imageInput, suggestModel, citySelect, bindYear, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES } from '../components.js';
 
 // "1.6 TDI" -> "1.6" (za padajući meni)
 const engNum = e => (String(e || '').match(/\d[.,]\d/) || [''])[0].replace(',', '.');
@@ -131,10 +131,11 @@ export async function vehicleFormPage({ el, params }) {
         <label class="f"><span>Snaga kW</span><input name="power_kw" inputmode="numeric" value="${v.power_kw || ''}"></label>
       </div>
       <div class="grid3">
-        <label class="f"><span>Mjenjač</span><select name="gearbox"><option value="">—</option>${['manuelni 5', 'manuelni 6', 'automatik', 'DSG'].map(g => html`<option ${v.gearbox === g ? raw('selected') : ''}>${g}</option>`)}</select></label>
-        <label class="f"><span>Karoserija</span><select name="body"><option value="">—</option>${['limuzina', 'hečbek', 'karavan', 'SUV', 'kupe', 'kabrio', 'monovolumen', 'kombi', 'pickup'].map(g => html`<option ${v.body === g ? raw('selected') : ''}>${g}</option>`)}</select></label>
-        <label class="f"><span>Boja</span><input name="color" value="${v.color || ''}"></label>
+        <label class="f"><span>Mjenjač</span>${optSelect('gearbox', GEARBOXES, v.gearbox)}</label>
+        <label class="f"><span>Pogon</span>${optSelect('drive', DRIVES, v.drive)}</label>
+        <label class="f"><span>Karoserija</span>${optSelect('body', BODIES, v.body)}</label>
       </div>
+      <label class="f"><span>Boja</span><input name="color" value="${v.color || ''}"></label>
       <label class="f"><span>Kilometraža</span><input name="mileage" inputmode="numeric" value="${v.mileage || ''}" placeholder="nije obavezno"></label>
       <label class="f"><span>Opis</span><textarea name="description" placeholder="koji dijelovi su dostupni, šta je već prodato, oštećenja…">${v.description || ''}</textarea></label>
       <label class="f"><span>Grad</span>${await citySelect('city', v.city || state.user.city, 'Izaberi grad')}</label>

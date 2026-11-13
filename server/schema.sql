@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
   engine_code TEXT,
   power_kw INTEGER,
   gearbox TEXT,
+  drive TEXT,              -- prednji | zadnji | 4x4
   body TEXT,
   color TEXT,
   mileage INTEGER,

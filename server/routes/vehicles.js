@@ -5,7 +5,7 @@ import { bad, notFound, str, int, imgList, modelById, normalize, searchWords, ra
 import { vehicleFilter, MODEL_JOIN, MODEL_COLS, sellerOf, fmtVehicleRow, pageArgs, countAndList } from './common.js';
 import { listParts, own } from './parts.js';
 
-const COLS = `v.id, v.year, v.fuel, v.engine, v.engine_code, v.power_kw, v.gearbox, v.city, v.images, v.status, v.created_at, v.user_id,
+const COLS = `v.id, v.year, v.fuel, v.engine, v.engine_code, v.power_kw, v.gearbox, v.drive, v.body, v.city, v.images, v.status, v.created_at, v.user_id,
   v.make_id, v.model_id, v.model_text, v.mileage, u.name seller_name, u.type seller_type, u.verified seller_verified, u.phone seller_phone, ${MODEL_COLS},
   (SELECT COUNT(*) FROM parts p WHERE p.vehicle_id=v.id AND p.status='active') parts_count`;
 const FROM = `FROM vehicles v JOIN users u ON u.id=v.user_id AND u.blocked=0 ${MODEL_JOIN('v')}`;
@@ -19,6 +19,10 @@ export function listVehicles(q, extraW = [], extraA = []) {
   if (q.seller) { w.push('v.user_id=?'); a.push(int(q.seller)); }
   if (q.from) { w.push('v.year>=?'); a.push(int(q.from)); }
   if (q.to) { w.push('v.year<=?'); a.push(int(q.to)); }
+  if (q.body) { w.push('v.body=?'); a.push(String(q.body)); }
+  if (q.drive) { w.push('v.drive=?'); a.push(String(q.drive)); }
+  if (q.gearbox === 'automatik') w.push("(v.gearbox LIKE 'automatik%' OR v.gearbox='DSG')");
+  else if (q.gearbox === 'manuelni') w.push("v.gearbox LIKE 'manuelni%'");
   if (q.engine) { w.push('v.engine LIKE ?'); a.push(String(q.engine).slice(0, 4) + '%'); }
   for (const word of searchWords(q.q)) { w.push('v.search LIKE ?'); a.push(`%${word}%`); }
   const order = q.sort === 'godiste' ? 'v.year DESC' : q.sort === 'godiste-' ? 'v.year ASC' : 'v.id DESC';
@@ -55,7 +59,7 @@ function readVehicle(body, user) {
   const d = {
     make_id, model_id: m ? m.id : null, model_text: str(body.model_text, 80), year,
     fuel: FUELS.includes(body.fuel) ? body.fuel : null, engine: str(body.engine, 40), engine_code: str(body.engine_code, 20),
-    power_kw: int(body.power_kw), gearbox: str(body.gearbox, 30), body: str(body.body, 30), color: str(body.color, 30),
+    power_kw: int(body.power_kw), gearbox: str(body.gearbox, 30), drive: ['prednji', 'zadnji', '4x4'].includes(body.drive) ? body.drive : null, body: str(body.body, 30), color: str(body.color, 30),
     mileage: int(body.mileage), description: str(body.description, 4000), city: str(body.city, 60) || user.city,
     images: imgList(body.images),
   };
