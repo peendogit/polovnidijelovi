@@ -1,5 +1,5 @@
 // Dijelovi interfejsa koji se ponavljaju
-import { html, raw, render, $, $$, api, esc, km, ago, intlPhone, thumb, getMakes, getMeta, toast, fail, busy, state, pushOverlay, nav, listCache, pageKey, qs, partUrl, vehicleUrl } from './core.js';
+import { html, raw, render, $, $$, api, esc, km, ago, intlPhone, thumb, getMakes, getMeta, toast, fail, busy, state, pushOverlay, nav, listCache, pageKey, qs, partUrl, vehicleUrl, pwa, isIOS } from './core.js';
 
 // ---------- ikone (stroke SVG) ----------
 const P = {
@@ -542,3 +542,29 @@ export function pager(box, total, shown, onMore) {
 }
 
 export const isOtpad = () => state.user?.type === 'otpad';
+
+// "Instaliraj aplikaciju": na Androidu pravi prozor za instalaciju, na iPhoneu uputstvo
+export async function installApp() {
+  if (pwa.prompt) {
+    const p = pwa.prompt; pwa.prompt = null;
+    p.prompt();
+    const r = await p.userChoice.catch(() => null);
+    if (r?.outcome === 'accepted') toast('Aplikacija se instalira — ikona će biti na početnom ekranu');
+    document.dispatchEvent(new Event('pwachange'));
+    return;
+  }
+  if (isIOS()) {
+    modal('Instaliraj na iPhone', html`<ol class="stack" style="padding-left:20px;margin:0;font-size:16px">
+      <li>Otvori sajt u <strong>Safariju</strong>.</li>
+      <li>Dolje klikni dugme <strong>Podijeli</strong> (kvadrat sa strelicom gore).</li>
+      <li>Izaberi <strong>„Add to Home Screen“</strong> / <strong>„Dodaj na početni ekran“</strong>.</li>
+      <li>Klikni <strong>Add / Dodaj</strong>.</li></ol>
+      <button class="btn dark block" data-close style="margin-top:16px">Razumijem</button>`);
+    return;
+  }
+  modal('Instaliraj aplikaciju', html`<ol class="stack" style="padding-left:20px;margin:0;font-size:16px">
+    <li>Otvori sajt u <strong>Chromeu</strong>.</li>
+    <li>Gore desno klikni <strong>⋮</strong> (tri tačke).</li>
+    <li>Izaberi <strong>„Install app“</strong> / <strong>„Instaliraj aplikaciju“</strong> (ili „Dodaj na početni ekran“).</li></ol>
+    <button class="btn dark block" data-close style="margin-top:16px">Razumijem</button>`);
+}

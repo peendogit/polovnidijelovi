@@ -1,15 +1,25 @@
 {
-  "name": "polovnidijelovi.com",
+  "id": "/",
+  "name": "polovnidijelovi.com — polovni auto dijelovi",
   "short_name": "Polovni dijelovi",
   "description": "Polovni auto dijelovi i vozila za dijelove sa otpada iz cijele BiH",
-  "start_url": "/",
+  "start_url": "/?app=1",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#F3F3F1",
+  "orientation": "portrait",
+  "background_color": "#1B1E22",
   "theme_color": "#1B1E22",
   "lang": "bs",
+  "categories": ["shopping", "auto"],
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Traži dio", "short_name": "Traži", "url": "/dijelovi", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Vozila za dijelove", "short_name": "Vozila", "url": "/vozila", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Tražim dio", "url": "/trazim/novi", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Objavi oglas", "short_name": "Objavi", "url": "/objavi", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

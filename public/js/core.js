@@ -227,3 +227,16 @@ document.addEventListener('error', e => {
 }, true);
 // "next" poslije prijave smije biti samo adresa na ovom sajtu
 export const safeNext = (n, def) => (typeof n === 'string' && /^\/(?![\/\\])/.test(n) ? n : def);
+
+// ---------- instalacija aplikacije na telefon ----------
+export const pwa = { prompt: null, installed: false };
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+pwa.installed = standalone();
+export const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pwa.prompt = e; document.dispatchEvent(new Event('pwachange')); });
+window.addEventListener('appinstalled', () => { pwa.installed = true; pwa.prompt = null; document.dispatchEvent(new Event('pwachange')); });
+// može li se ponuditi instalacija (Android Chrome dugme, ili uputstvo za iPhone)
+export const canInstall = () => !pwa.installed && (!!pwa.prompt || isIOS());
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}

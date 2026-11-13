@@ -132,7 +132,7 @@ const server = http.createServer(async (req, res) => {
     // ---------- statički fajlovi ----------
     if (/\.[a-z0-9]+$/i.test(p) && !p.includes('..')) {
       const f = path.join(PUB, p);
-      if (f.startsWith(PUB)) return serveFile(req, res, f, p.startsWith('/js/') || p.endsWith('.css') ? 'no-cache' : 'public, max-age=86400');
+      if (f.startsWith(PUB)) return serveFile(req, res, f, p.startsWith('/js/') || p.endsWith('.css') || p === '/sw.js' || p.endsWith('.webmanifest') ? 'no-cache' : 'public, max-age=86400');
     }
 
     // ---------- sve ostalo: aplikacija (index.html sa SEO podacima) ----------

@@ -1,6 +1,6 @@
 // polovnidijelovi.com — pokretanje aplikacije, meni, rute
-import { html, render, $, route, dispatch, loadMe, onMe, state, setTitle, api, go, toast, setMe, pushOverlay } from './core.js';
-import { icon } from './components.js';
+import { html, render, $, route, dispatch, loadMe, onMe, state, setTitle, api, go, toast, setMe, pushOverlay, pwa, canInstall } from './core.js';
+import { icon, installApp } from './components.js';
 import { homePage } from './pages/home.js';
 import { partsPage, partPage } from './pages/parts.js';
 import { vehiclesPage, vehiclePage } from './pages/vehicles.js';
@@ -101,15 +101,32 @@ function openDrawer() {
       ${u.is_admin ? html`<a href="/admin">${icon('shield')} Administracija</a>` : ''}
       <button class="it" id="dlo">${icon('logout')} Odjavi se</button>`
       : html`<a href="/prijava">${icon('user')} Prijava</a><a href="/registracija">${icon('plus')} Registracija</a>`}
+    ${pwa.installed ? '' : html`<hr><button class="it" id="dinst">${icon('plus')} Instaliraj aplikaciju</button>`}
     <hr><a href="/uslovi">Uslovi korištenja</a>
   </div>`);
   d.hidden = false;
   const close = pushOverlay(() => { d.hidden = true; });
   // klik na link: go() sam zatvori meni; klik pored ili na X: zatvori kao "nazad"
   d.onclick = e => { if (e.target === d || e.target.closest('#dx')) close(); };
+  $('#dinst', d)?.addEventListener('click', () => { close(); setTimeout(installApp, 50); });
   $('#dlo', d)?.addEventListener('click', async () => { await api('/api/auth/logout', { body: {} }); setMe({ user: null }); toast('Odjavljen si'); go('/'); });
 }
 $('#menuBtn').onclick = openDrawer;
+
+// traka "Instaliraj aplikaciju" na dnu (dok je korisnik ne zatvori)
+function drawInstallBar() {
+  let b = $('#instbar');
+  let hidden = false;
+  try { hidden = Date.now() - Number(localStorage.getItem('pd_inst_x') || 0) < 14 * 864e5; } catch { /* */ }
+  if (!canInstall() || hidden) { b?.remove(); return; }
+  if (!b) { b = document.createElement('div'); b.id = 'instbar'; b.className = 'instbar'; document.body.appendChild(b); }
+  render(b, html`<img src="/icons/icon-192.png" alt="" width="40" height="40"><div><strong>Polovni dijelovi na telefonu</strong><span>Brže otvaranje, ikona na početnom ekranu</span></div>
+    <button class="btn accent sm" id="instb">Instaliraj</button><button class="icon-btn" id="instx" aria-label="Zatvori">${icon('x', 18, '#fff')}</button>`);
+  $('#instb', b).onclick = installApp;
+  $('#instx', b).onclick = () => { try { localStorage.setItem('pd_inst_x', Date.now()); } catch { /* */ } b.remove(); };
+}
+document.addEventListener('pwachange', drawInstallBar);
+setTimeout(drawInstallBar, 4000);
 onMe(drawNav);
 document.addEventListener('routechange', drawNav);
 
