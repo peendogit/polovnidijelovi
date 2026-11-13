@@ -1,5 +1,5 @@
 import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, getMeta } from '../core.js';
-import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pager, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox } from '../components.js';
+import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox } from '../components.js';
 import { inquiryModal, share, reportModal } from './parts.js';
 
 // Vozila za dijelove — filter i lista (nacrt 5)
@@ -37,7 +37,7 @@ export async function vehiclesPage({ el, query: q }) {
       <label><span class="sr">Poredaj</span><select id="vs"><option value="">Najnovija</option>
         <option value="godiste" ${q.sort === 'godiste' ? 'selected' : ''}>Najnovije godište</option><option value="godiste-" ${q.sort === 'godiste-' ? 'selected' : ''}>Najstarije godište</option></select></label>
     </div>
-    <div id="vl" class="stack"></div><div id="vm"></div><div id="vb" style="margin-top:12px"></div>
+    <div id="vb" style="margin-bottom:12px"></div><div id="vl"></div>
   </div>`);
 
   const picker = await vehiclePicker($('#vp', el), { make: q.make, model: q.model, gen: q.gen });
@@ -58,29 +58,29 @@ export async function vehiclesPage({ el, query: q }) {
   $('#vf', el).onsubmit = e => { e.preventDefault(); submit(); };
   $('#vs', el).onchange = submit;
 
-  let page = 1, items = [];
   const label = picker.get().label;
-  const load = async () => {
-    const r = await api('/api/vehicles' + qs({ ...q, page }));
-    items = items.concat(r.items);
-    $('#vc', el).textContent = q.model ? `${label} na otpadima: ${r.total} ${r.total === 1 ? 'vozilo' : 'vozila'}` : `${r.total} ${r.total === 1 ? 'vozilo' : 'vozila'} za dijelove`;
-    if (!items.length) {
-      render($('#vl', el), html`<div class="empty"><strong>Trenutno nema takvih vozila</strong>Objavi „Tražim dio“ — otpadi koji dobiju ovaj model javiće ti se.
-        <div style="margin-top:14px"><a class="btn dark" href="/trazim/novi${qs({ make: q.make, model: q.model, gen: q.gen })}">${icon('send', 18, '#fff')} Tražim dio</a></div></div>`);
-    } else {
+  let shownTotal = 0;
+  await pagedList({
+    box: $('#vl', el), query: q,
+    fetch: page => api('/api/vehicles' + qs({ ...q, stranica: undefined, page })),
+    draw: (items, total) => {
+      shownTotal = total;
+      $('#vc', el).textContent = q.model ? `${label} na otpadima: ${total} ${total === 1 ? 'vozilo' : 'vozila'}` : `${total} ${total === 1 ? 'vozilo' : 'vozila'} za dijelove`;
+      if (!items.length) {
+        return html`<div class="empty"><strong>Trenutno nema takvih vozila</strong>Objavi „Tražim dio“ — otpadi koji dobiju ovaj model javiće ti se.
+          <div style="margin-top:14px"><a class="btn dark" href="/trazim/novi${qs({ make: q.make, model: q.model, gen: q.gen })}">${icon('send', 18, '#fff')} Tražim dio</a></div></div>`;
+      }
       const [first, ...rest] = items;
-      render($('#vl', el), html`${vehicleCard(first)}${rest.length ? html`<div class="list">${rest.map(v => vehicleRow(v))}</div>` : ''}`);
-    }
-    pager($('#vm', el), r.total, items.length, async () => { page++; await load(); });
-    if (q.model && r.total) {
-      render($('#vb', el), html`<div class="card stack" style="gap:8px;padding:16px">
-        <strong style="font-size:16px">Treba ti dio za ${label}?</strong>
-        <span class="hint" style="font-size:14px">Pošalji jedan upit svim otpadima koji imaju ovaj model.</span>
-        <button class="btn dark block" id="askAll">Pitaj sve otpade</button></div>`);
-      $('#askAll', el).onclick = () => askAllModal({ make: q.make, model: q.model, gen: q.gen }, label);
-    }
-  };
-  await load();
+      return html`<div class="stack">${vehicleCard(first)}${rest.length ? html`<div class="list">${rest.map(v => vehicleRow(v))}</div>` : ''}</div>`;
+    },
+  });
+  if (q.model && shownTotal) {
+    render($('#vb', el), html`<div class="card stack" style="gap:8px;padding:16px">
+      <strong style="font-size:16px">Treba ti dio za ${label}?</strong>
+      <span class="hint" style="font-size:14px">Pošalji jedan upit svim otpadima koji imaju ovaj model.</span>
+      <button class="btn dark block" id="askAll">Pitaj sve otpade</button></div>`);
+    $('#askAll', el).onclick = () => askAllModal({ make: q.make, model: q.model, gen: q.gen }, label);
+  }
 }
 
 function askAllModal(target, label) {

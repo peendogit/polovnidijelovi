@@ -1,5 +1,5 @@
 import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy, loadMe } from '../core.js';
-import { icon, vehiclePicker, requestRow, citySelect, pager, contactButtons, verifiedBadge, imageInput, suggestModel, confirmBox, gallery, bindGallery } from '../components.js';
+import { icon, vehiclePicker, requestRow, citySelect, pagedList, contactButtons, verifiedBadge, imageInput, suggestModel, confirmBox, gallery, bindGallery } from '../components.js';
 
 export async function requestsPage({ el, query: q }) {
   setTitle('Tražim dio');
@@ -18,22 +18,21 @@ export async function requestsPage({ el, query: q }) {
       ${q.make || q.q || q.city || q.unanswered ? html`<a href="/trazim" class="reset-link">Poništi pretragu</a>` : ''}
     </form>
   </section>
-  <div class="wrap"><div class="count-line"><span class="c" id="rc">…</span></div><div id="rl"></div><div id="rm"></div></div>`);
+  <div class="wrap"><div class="count-line"><span class="c" id="rc">…</span></div><div id="rl"></div></div>`);
   const picker = await vehiclePicker($('#rp', el), { make: q.make, model: q.model, gen: q.gen });
   $('#rf', el).onsubmit = e => {
     e.preventDefault();
     const v = picker.get(); const f = formData(e.target);
     go('/trazim' + qs({ make: v.make, model: v.model, gen: v.gen, q: f.q.trim(), city: f.city, unanswered: f.unanswered ? 1 : '' }));
   };
-  let page = 1, items = [];
-  const load = async () => {
-    const r = await api('/api/requests' + qs({ ...q, page }));
-    items = items.concat(r.items);
-    $('#rc', el).textContent = `${r.total} ${r.total === 1 ? 'otvoren zahtjev' : 'otvorenih zahtjeva'}`;
-    render($('#rl', el), items.length ? html`<div class="list">${items.map(requestRow)}</div>` : html`<div class="empty"><strong>Nema zahtjeva</strong>Promijeni filter ili objavi svoj.</div>`);
-    pager($('#rm', el), r.total, items.length, async () => { page++; await load(); });
-  };
-  await load();
+  await pagedList({
+    box: $('#rl', el), query: q, per: 30,
+    fetch: page => api('/api/requests' + qs({ ...q, stranica: undefined, page })),
+    draw: (items, total) => {
+      $('#rc', el).textContent = `${total} ${total === 1 ? 'otvoren zahtjev' : 'otvorenih zahtjeva'}`;
+      return items.length ? html`<div class="list">${items.map(requestRow)}</div>` : html`<div class="empty"><strong>Nema zahtjeva</strong>Promijeni filter ili objavi svoj.</div>`;
+    },
+  });
   if (otpad && state.counts.requests) { api('/api/requests/seen', { body: {} }).then(loadMe).catch(() => {}); }
 }
 

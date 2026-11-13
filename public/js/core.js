@@ -95,8 +95,13 @@ export function pushOverlay(closeFn) {
 }
 function closeAllOverlays() { while (overlays.length) overlays.pop()(); }
 
+// Da li je stranica otvorena dugmetom "nazad" (tada liste vraćamo kako su bile)
+export const nav = { back: false };
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
 export async function go(path, replace = false) {
   if (backWait) await backWait;
+  nav.back = false;
   if (overlays.length) { closeAllOverlays(); replace = true; }
   if (replace) history.replaceState({}, '', path); else history.pushState({}, '', path);
   await dispatch();
@@ -136,7 +141,8 @@ document.addEventListener('click', e => {
 window.addEventListener('popstate', () => {
   if (skipPop) { skipPop--; if (!skipPop) { backDone?.(); backWait = null; } return; }
   if (overlays.length) { overlays.pop()(); return; } // "nazad" zatvara prozor, stranica ostaje
-  dispatch();
+  nav.back = true;
+  dispatch().then(() => { nav.back = false; });
 });
 export function setTitle(t) { document.title = t ? `${t} | polovnidijelovi.com` : 'Polovni auto dijelovi i vozila za dijelove | polovnidijelovi.com'; }
 
@@ -189,3 +195,12 @@ export const myCar = {
   get() { try { return JSON.parse(localStorage.getItem('pd_car') || 'null'); } catch { return null; } },
   set(v) { try { v ? localStorage.setItem('pd_car', JSON.stringify(v)) : localStorage.removeItem('pd_car'); } catch { /* */ } },
 };
+
+// ---------- zapamćene liste (za povratak "nazad" na isto mjesto) ----------
+export const listCache = new Map(); // ključ: adresa stranice -> { items, total, page, y }
+export const pageKey = () => location.pathname + location.search;
+let st;
+window.addEventListener('scroll', () => {
+  clearTimeout(st);
+  st = setTimeout(() => { const c = listCache.get(pageKey()); if (c) c.y = window.scrollY; }, 120);
+}, { passive: true });

@@ -1,5 +1,5 @@
 // Dijelovi interfejsa koji se ponavljaju
-import { html, raw, render, $, $$, api, esc, km, ago, intlPhone, thumb, getMakes, getMeta, toast, fail, busy, state, pushOverlay } from './core.js';
+import { html, raw, render, $, $$, api, esc, km, ago, intlPhone, thumb, getMakes, getMeta, toast, fail, busy, state, pushOverlay, nav, listCache, pageKey, qs } from './core.js';
 
 // ---------- ikone (stroke SVG) ----------
 const P = {
@@ -435,6 +435,64 @@ export async function citySelect(name, value, any = 'Svi gradovi') {
   const meta = await getMeta();
   const has = value && !meta.cities.includes(value);
   return html`<select name="${name}"><option value="">${any}</option>${has ? html`<option selected>${value}</option>` : ''}${meta.cities.map(c => html`<option ${c === value ? raw('selected') : ''}>${c}</option>`)}</select>`;
+}
+
+// ---------- lista sa učitavanjem: sama učitava dalje kad dođeš do dna, pamti mjesto za "nazad",
+// i ima obične linkove na stranice (za Google) ----------
+// opts: { box, fetch(page)->{items,total}, draw(items,total), base: '/dijelovi', query, per: 24 }
+export async function pagedList(opts) {
+  const { box, fetch: fetchPage, draw, query = {}, per = 24 } = opts;
+  const key = pageKey();
+  const start = Math.max(1, parseInt(query.stranica, 10) || 1);
+  let c = nav.back ? listCache.get(key) : null;
+  if (!c) {
+    const r = await fetchPage(start);
+    c = { items: r.items, total: r.total, first: start, page: start, y: 0 };
+  }
+  listCache.set(key, c);
+  if (listCache.size > 25) listCache.delete(listCache.keys().next().value);
+  render(box, html`<div class="pl-items"></div><div class="pl-more"></div><nav class="pl-pages" aria-label="Stranice"></nav>`);
+  const itemsBox = $('.pl-items', box), moreBox = $('.pl-more', box), pagesBox = $('.pl-pages', box);
+  let loading = false, io = null;
+  const shownTo = () => (c.first - 1) * per + c.items.length;
+  const paint = () => {
+    render(itemsBox, draw(c.items, c.total));
+    const left = c.total - shownTo();
+    render(moreBox, left > 0 ? html`<div class="more"><button class="btn line">Učitaj još (${left})</button></div>` : '');
+    const b = $('button', moreBox);
+    if (b) b.onclick = more;
+    // brojevi stranica — obični linkovi (Google ih prati; i ljudima služe za skok)
+    const pages = Math.ceil(c.total / per);
+    if (pages > 1) {
+      const base = location.pathname, q = { ...query }; delete q.stranica;
+      const nums = [...new Set([1, 2, c.page - 1, c.page, c.page + 1, c.page + 2, pages])].filter(n => n >= 1 && n <= pages).sort((a, b) => a - b);
+      let prev = 0;
+      render(pagesBox, html`<span class="hint">Stranice:</span> ${nums.map(n => { const gap = n - prev > 1 ? html`<span class="hint">…</span>` : ''; prev = n; return html`${gap}<a href="${base}${qs({ ...q, stranica: n > 1 ? n : '' })}" class="${n >= c.first && n <= c.page ? 'on' : ''}">${n}</a>`; })}`);
+    } else render(pagesBox, '');
+  };
+  async function more() {
+    if (loading || shownTo() >= c.total) return;
+    loading = true;
+    const b = $('button', moreBox); busy(b, true, 'Učitavam…');
+    try {
+      const r = await fetchPage(c.page + 1);
+      c.page++; c.items = c.items.concat(r.items); c.total = r.total;
+      paint();
+    } catch (e) { fail(e); busy(b, false); }
+    loading = false;
+  }
+  paint();
+  // samo učitaj dalje kad se priđe dnu liste
+  if ('IntersectionObserver' in window) {
+    io = new IntersectionObserver(es => {
+      if (!document.body.contains(box)) { io.disconnect(); return; }
+      if (es.some(e => e.isIntersecting)) more();
+    }, { rootMargin: '700px 0px' });
+    io.observe(moreBox);
+  }
+  // povratak "nazad": vrati na isto mjesto
+  if (nav.back && c.y) requestAnimationFrame(() => window.scrollTo(0, c.y));
+  return { reload: async () => { const r = await fetchPage(c.first); c.items = r.items; c.total = r.total; c.page = c.first; paint(); } };
 }
 
 // "Učitaj još" za liste

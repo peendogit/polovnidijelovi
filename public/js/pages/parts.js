@@ -1,5 +1,5 @@
 import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy } from '../core.js';
-import { icon, vehiclePicker, partRow, citySelect, pager, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox } from '../components.js';
+import { icon, vehiclePicker, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox } from '../components.js';
 
 // Lista dijelova; /dijelovi?make=&model=&gen=&q=&city=&sort=
 export async function partsPage({ el, query, params }) {
@@ -29,7 +29,7 @@ export async function partsPage({ el, query, params }) {
         <option value="">Najnovije</option><option value="cijena" ${q.sort === 'cijena' ? 'selected' : ''}>Najjeftinije</option><option value="cijena-" ${q.sort === 'cijena-' ? 'selected' : ''}>Najskuplje</option>
       </select></label></div>
     <div id="pv"></div>
-    <div id="pl"></div><div id="pm"></div>
+    <div id="pl"></div>
   </div>`);
 
   const picker = await vehiclePicker($('#pp', el), { make: q.make, model: q.model, gen: q.gen });
@@ -41,20 +41,7 @@ export async function partsPage({ el, query, params }) {
   $('#pf', el).onsubmit = e => { e.preventDefault(); search(); };
   $('#ps', el).onchange = search;
 
-  let page = 1, items = [];
-  const load = async () => {
-    const r = await api('/api/parts' + qs({ ...q, page }));
-    items = items.concat(r.items);
-    $('#pc', el).textContent = `${r.total} ${r.total === 1 ? 'oglas' : 'oglasa'}`;
-    if (!items.length) {
-      const v = picker.get();
-      render($('#pl', el), html`<div class="empty"><strong>Nema takvih dijelova</strong>Pošalji „Tražim dio“ — otpadi koji ga imaju javiće ti se sa cijenom.
-        <div style="margin-top:14px"><a class="btn dark" href="/trazim/novi${qs({ make: v.make, model: v.model, gen: v.gen, part: q.q })}">${icon('send', 18, '#fff')} Tražim ovaj dio</a></div></div>`);
-    } else render($('#pl', el), html`<div class="list cols">${items.map(p => partRow(p))}</div>`);
-    pager($('#pm', el), r.total, items.length, async () => { page++; await load(); });
-  };
-  await load();
-  // vozila tog modela na otpadima
+  // vozila tog modela na otpadima (prije liste, da se lista ne pomjera)
   if (q.make && q.model) {
     const vr = await api('/api/vehicles' + qs({ make: q.make, model: q.model, gen: q.gen, limit: 1 }));
     if (vr.total) {
@@ -62,6 +49,17 @@ export async function partsPage({ el, query, params }) {
         <span class="dot">${icon('car', 20, '#1B1E22')}</span><div><strong>${vr.total} ${vr.total === 1 ? 'vozilo' : 'vozila'} ovog modela na otpadima</strong><span>Pitaj otpad za bilo koji dio</span></div>${icon('right', 20)}</a>`);
     }
   }
+  await pagedList({
+    box: $('#pl', el), query,
+    fetch: page => api('/api/parts' + qs({ ...q, stranica: undefined, page })),
+    draw: (items, total) => {
+      $('#pc', el).textContent = `${total} ${total === 1 ? 'oglas' : 'oglasa'}`;
+      if (items.length) return html`<div class="list cols">${items.map(p => partRow(p))}</div>`;
+      const v = picker.get();
+      return html`<div class="empty"><strong>Nema takvih dijelova</strong>Pošalji „Tražim dio“ — otpadi koji ga imaju javiće ti se sa cijenom.
+        <div style="margin-top:14px"><a class="btn dark" href="/trazim/novi${qs({ make: v.make, model: v.model, gen: v.gen, part: q.q })}">${icon('send', 18, '#fff')} Tražim ovaj dio</a></div></div>`;
+    },
+  });
 }
 
 // Detalj dijela

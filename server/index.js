@@ -120,7 +120,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ---------- sve ostalo: aplikacija (index.html sa SEO podacima) ----------
-    const html = renderIndex(p, req.headers.host);
+    const html = renderIndex(p, req.headers.host, url.searchParams);
     return send(req, res, html.status || 200, html.body, TYPES['.html'], { 'Cache-Control': 'no-cache' });
   } catch (e) {
     const status = e.status || 500;

@@ -1,5 +1,5 @@
 import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, setMe, loadMe } from '../core.js';
-import { icon, partRow, vehicleRow, requestRow, listOr, citySelect, pager, confirmBox, avatarUpload, contactButtons, verifiedBadge } from '../components.js';
+import { icon, partRow, vehicleRow, requestRow, listOr, citySelect, pager, pagedList, confirmBox, avatarUpload, contactButtons, verifiedBadge } from '../components.js';
 import { inquiryModal } from './parts.js';
 
 // ---------- prijava / registracija ----------
@@ -245,16 +245,13 @@ export async function sellerPage({ el, params, query }) {
   <nav class="tabs" style="margin-top:12px">
     <a href="?tab=vozila" class="${tab === 'vozila' ? 'on' : ''}">Vozila (${s.vehicles})</a>
     <a href="?tab=dijelovi" class="${tab === 'dijelovi' ? 'on' : ''}">Dijelovi (${s.parts})</a></nav>
-  <div class="wrap" style="padding-top:12px"><div id="sl"></div><div id="sm"></div></div>`);
+  <div class="wrap" style="padding-top:12px"><div id="sl"></div></div>`);
   $$('.tabs a', el).forEach(a => { a.onclick = e => { e.preventDefault(); go(`/prodavac/${s.id}${a.getAttribute('href')}`, true); }; });
   $('#ask', el)?.addEventListener('click', () => inquiryModal({ to: s.id }, 'Pozdrav, zanima me '));
-  let page = 1, items = [];
-  const load = async () => {
-    const r = await api((tab === 'vozila' ? '/api/vehicles' : '/api/parts') + qs({ seller: s.id, page }));
-    items = items.concat(r.items);
-    render($('#sl', el), listOr(items, tab === 'vozila' ? v => vehicleRow(v, { noSeller: true }) : p => partRow(p, { noSeller: true }), 'Ništa objavljeno.'));
-    pager($('#sm', el), r.total, items.length, async () => { page++; await load(); });
-  };
-  await load();
+  await pagedList({
+    box: $('#sl', el), query,
+    fetch: page => api((tab === 'vozila' ? '/api/vehicles' : '/api/parts') + qs({ seller: s.id, page })),
+    draw: items => listOr(items, tab === 'vozila' ? v => vehicleRow(v, { noSeller: true }) : p => partRow(p, { noSeller: true }), 'Ništa objavljeno.'),
+  });
 }
 

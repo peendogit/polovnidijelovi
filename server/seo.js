@@ -71,7 +71,38 @@ function meta(p) {
   return {};
 }
 
-export function renderIndex(p, host = SITE) {
+// Za Google: obični linkovi na oglase i stranice (vidi ih i bez JavaScripta)
+function seoList(p, sp) {
+  const page = Math.max(1, parseInt(sp?.get('stranica'), 10) || 1);
+  const per = 24, off = (page - 1) * per;
+  let rows = [], total = 0, base = p, kind = 'dio';
+  const parts = (where, args) => {
+    total = get(`SELECT COUNT(*) c FROM parts p WHERE p.status='active' ${where}`, ...args).c;
+    rows = all(`SELECT p.id, p.title t, k.name mk, mo.name md, p.price FROM parts p LEFT JOIN car_make k ON k.id=p.make_id LEFT JOIN car_model mo ON mo.id=p.model_id
+      WHERE p.status='active' ${where} ORDER BY p.id DESC LIMIT ? OFFSET ?`, ...args, per, off);
+  };
+  let m;
+  if (p === '/dijelovi') parts('', []);
+  else if ((m = p.match(/^\/polovni-dijelovi\/([\w-]+)(?:\/([\w-]+))?$/))) {
+    const sl = findSlug(m[1], m[2]);
+    if (!sl) return '';
+    if (sl.model) parts('AND p.model_id IN (SELECT id FROM car_model WHERE make_id=? AND name=?)', [sl.make_id, sl.model]);
+    else parts('AND p.make_id=?', [sl.make_id]);
+  } else if (p === '/vozila') {
+    kind = 'vozilo';
+    total = get("SELECT COUNT(*) c FROM vehicles WHERE status='active'").c;
+    rows = all(`SELECT v.id, k.name mk, mo.name md, v.year t FROM vehicles v LEFT JOIN car_make k ON k.id=v.make_id LEFT JOIN car_model mo ON mo.id=v.model_id
+      WHERE v.status='active' ORDER BY v.id DESC LIMIT ? OFFSET ?`, per, off);
+  } else return '';
+  const pages = Math.ceil(total / per);
+  const links = rows.map(r => `<li><a href="/${kind}/${r.id}">${esc([r.t, r.mk, r.md].filter(Boolean).join(' '))}</a></li>`).join('');
+  const nav = [];
+  if (page > 1) nav.push(`<a href="${base}${page > 2 ? '?stranica=' + (page - 1) : ''}">Prethodna stranica</a>`);
+  if (page < pages) nav.push(`<a href="${base}?stranica=${page + 1}">Sljedeća stranica</a>`);
+  return `<noscript><ul>${links}</ul><p>${nav.join(' | ')}</p></noscript>`;
+}
+
+export function renderIndex(p, host = SITE, sp = null) {
   const m = meta(p);
   const title = m.title ? `${m.title} | ${SITE}` : `Polovni auto dijelovi i vozila za dijelove | ${SITE}`;
   const abs = u => (u.startsWith('http') ? u : `https://${host}${u}`);
@@ -79,7 +110,8 @@ export function renderIndex(p, host = SITE) {
   const body = template()
     .replace(/__TITLE__/g, esc(title))
     .replace(/__DESC__/g, esc((m.desc || DEF_DESC).slice(0, 300)))
-    .replace(/__IMG__/g, esc(img));
+    .replace(/__IMG__/g, esc(img))
+    .replace('<!--SEO-->', seoList(p, sp));
   return { status: m.status || 200, body };
 }
 
