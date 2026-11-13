@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { app } from '../router.js';
 import { get, run } from '../db.js';
-import { bad, hashPassword, checkPassword, makeToken, sessionCookie, rateLimit, str, bool, CITIES } from '../lib.js';
+import { bad, hashPassword, checkPassword, makeToken, sessionCookie, rateLimit, str, bool, CITIES, COLORS } from '../lib.js';
 
 export const PUBLIC_USER = 'id, type, name, phone, viber, whatsapp, city, address, about, logo, ships, verified, created_at';
 
@@ -92,6 +92,7 @@ app.post('/api/me/api-key', ({ user }) => {
 
 app.get('/api/meta', () => ({
   cities: CITIES,
+  colors: COLORS,
   fuels: ['dizel', 'benzin', 'benzin + plin', 'hibrid', 'električni'],
   stats: {
     parts: get("SELECT COUNT(*) c FROM parts WHERE status='active'").c,

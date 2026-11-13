@@ -135,3 +135,6 @@ export function normalize(s) {
 export function searchWords(q) {
   return normalize(q).split(' ').filter(w => w.length >= 2).slice(0, 6);
 }
+
+export const COLORS = ['bijela', 'biserno bijela', 'crna', 'siva', 'tamno siva (grafit)', 'srebrena', 'plava', 'tamno plava', 'svijetlo plava', 'tirkizna',
+  'crvena', 'bordo', 'narandžasta', 'žuta', 'zlatna', 'zelena', 'tamno zelena', 'maslinasta', 'smeđa', 'bež', 'šampanj', 'bakarna', 'ljubičasta', 'roza', 'mat crna', 'mat siva', 'dvobojna', 'ostalo'];

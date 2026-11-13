@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
   drive TEXT,              -- prednji | zadnji | 4x4
   body TEXT,
   color TEXT,
+  color_code TEXT,
   mileage INTEGER,
   description TEXT,
   city TEXT,
@@ -90,6 +91,8 @@ CREATE TABLE IF NOT EXISTS parts (
   engine TEXT,
   part_no TEXT,          -- kataloški / OEM broj
   side TEXT,             -- lijevo / desno / prednje / zadnje
+  color TEXT,
+  color_code TEXT,
   condition TEXT DEFAULT 'polovno',  -- polovno | novo | oštećeno
   price REAL,
   negotiable INTEGER DEFAULT 0,

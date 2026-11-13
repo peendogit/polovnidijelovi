@@ -7,7 +7,6 @@ import { inquiryModal, share, reportModal } from './parts.js';
 export async function vehiclesPage({ el, query: q }) {
   setTitle('Vozila za dijelove');
   const meta = await getMeta();
-  const years = []; for (let y = new Date().getFullYear(); y >= 1985; y--) years.push(y);
   render(el, html`
   <section class="page-head">
     <div class="row"><a href="/" class="icon-btn" aria-label="Nazad">${icon('back', 22, '#fff')}</a><h1>Vozila za dijelove</h1></div>
@@ -25,8 +24,8 @@ export async function vehiclesPage({ el, query: q }) {
       <div id="xf" class="stack" style="gap:10px" hidden>
         <label class="f" data-f="fuel" hidden><span>Gorivo</span><select name="fuel"><option value="">Svejedno</option>${meta.fuels.map(f => html`<option ${q.fuel === f ? raw('selected') : ''}>${f}</option>`)}</select></label>
         <div class="grid2" data-f="year" hidden>
-          <label class="f"><span>Godište od</span><select name="from"><option value="">—</option>${years.map(y => html`<option ${String(y) === q.from ? raw('selected') : ''}>${y}</option>`)}</select></label>
-          <label class="f"><span>do</span><select name="to"><option value="">—</option>${years.map(y => html`<option ${String(y) === q.to ? raw('selected') : ''}>${y}</option>`)}</select></label>
+          <label class="f"><span>Godište od</span><select name="from"></select></label>
+          <label class="f"><span>do</span><select name="to"></select></label>
         </div>
         <label class="f" data-f="city" hidden><span>Grad</span>${await citySelect('city', q.city)}</label>
         <label class="f" data-f="engine" hidden><span>Motor</span>${engineSelect('engine', q.engine, 'Svi')}</label>
@@ -48,6 +47,22 @@ export async function vehiclesPage({ el, query: q }) {
   </div>`);
 
   const picker = await vehiclePicker($('#vp', el), { make: q.make, model: q.model, gen: q.gen });
+  // godište od/do: samo godine izabranog modela/generacije
+  const yFrom = $('#vf select[name=from]', el), yTo = $('#vf select[name=to]', el);
+  let curFrom = q.from || '', curTo = q.to || '';
+  const drawYears = () => {
+    const v = picker.get();
+    const a = v.yearFrom || 1970, b = Math.min(v.yearTo || new Date().getFullYear(), new Date().getFullYear());
+    const ys = []; for (let y = b; y >= a; y--) ys.push(String(y));
+    if (!ys.includes(curFrom)) curFrom = '';
+    if (!ys.includes(curTo)) curTo = '';
+    yFrom.innerHTML = html`<option value="">—</option>${ys.map(y => html`<option ${y === curFrom ? raw('selected') : ''}>${y}</option>`)}`.s;
+    yTo.innerHTML = html`<option value="">—</option>${ys.map(y => html`<option ${y === curTo ? raw('selected') : ''}>${y}</option>`)}`.s;
+  };
+  yFrom.onchange = () => { curFrom = yFrom.value; };
+  yTo.onchange = () => { curTo = yTo.value; };
+  $('#vp', el).addEventListener('pick', drawYears);
+  drawYears();
   // ako je model izabran, odmah prikaži (kao u nacrtu: izabereš Golf 6 → svi Golf 6)
   $('#vp', el).addEventListener('pick', () => { const v = picker.get(); if (v.model) submit(); });
   $$('#chips .chip', el).forEach(c => {
@@ -124,7 +139,7 @@ export async function vehiclePage({ el, params }) {
         <div class="veh">${v.generation ? html`<a href="/vozila${qs({ make: v.make_id, gen: v.model_id })}">${v.make_name} ${v.generation}</a>` : ''}</div>
         <dl class="facts">
           ${[['Godište', v.year], ['Gorivo', v.fuel], ['Motor', v.engine], ['Šifra motora', v.engine_code], ['Snaga', v.power_kw ? v.power_kw + ' kW' : null],
-            ['Mjenjač', v.gearbox], ['Pogon', v.drive], ['Karoserija', v.body], ['Boja', v.color], ['Kilometraža', v.mileage ? v.mileage.toLocaleString('bs-BA') + ' km' : null], ['Lokacija', v.city], ['Objavljeno', ago(v.created_at)]]
+            ['Mjenjač', v.gearbox], ['Pogon', v.drive], ['Karoserija', v.body], ['Boja', v.color], ['Kod boje', v.color_code], ['Kilometraža', v.mileage ? v.mileage.toLocaleString('bs-BA') + ' km' : null], ['Lokacija', v.city], ['Objavljeno', ago(v.created_at)]]
             .filter(x => x[1]).map(([a, b]) => html`<div><dt>${a}</dt><dd>${b}</dd></div>`)}
         </dl>
         ${v.description ? html`<div class="desc">${v.description}</div>` : ''}

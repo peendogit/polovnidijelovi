@@ -4,7 +4,7 @@
 // POST /api/feed/remove     { kind: 'parts'|'vehicles', ext_ids: [...] }   -> prodato / rastavljeno
 import { app } from '../router.js';
 import { get, run, tx } from '../db.js';
-import { HttpError, bad, str, int, num, bool, imgList, normalize, rateLimit } from '../lib.js';
+import { COLORS, HttpError, bad, str, int, num, bool, imgList, normalize, rateLimit } from '../lib.js';
 
 function feedUser(req) {
   const key = req.headers['x-api-key'];
@@ -54,7 +54,7 @@ app.post('/api/feed/vehicles', ({ req, body }) => {
       const d = {
         make_id: m?.make_id || null, model_id: m?.id || null, model_text: m?.id ? null : str([it.make, it.model].filter(Boolean).join(' '), 80),
         year: int(it.year), fuel: str(it.fuel, 30), engine: str(it.engine, 40), engine_code: str(it.engine_code, 20), power_kw: int(it.power_kw),
-        gearbox: str(it.gearbox, 30), drive: ['prednji', 'zadnji', '4x4'].includes(it.drive) ? it.drive : null, body: str(it.body, 30), color: str(it.color, 30), mileage: int(it.mileage), description: str(it.description, 4000),
+        gearbox: str(it.gearbox, 30), drive: ['prednji', 'zadnji', '4x4'].includes(it.drive) ? it.drive : null, body: str(it.body, 30), color: COLORS.includes(it.color) ? it.color : null, color_code: str(it.color_code || (COLORS.includes(it.color) ? null : it.color), 20), mileage: int(it.mileage), description: str(it.description, 4000),
         city: str(it.city, 60) || u.city, images: imgList(it.images),
       };
       d.search = normalize([it.make, it.model, d.engine, d.engine_code, d.description].join(' '));
@@ -76,7 +76,7 @@ app.post('/api/feed/parts', ({ req, body }) => {
       const veh = it.vehicle_ext_id ? get('SELECT id FROM vehicles WHERE user_id=? AND ext_id=?', u.id, String(it.vehicle_ext_id)) : null;
       const d = {
         title, make_id: m?.make_id || null, model_id: m?.id || null, model_text: m?.id ? null : str([it.make, it.model].filter(Boolean).join(' '), 80),
-        year: int(it.year), fuel: str(it.fuel, 30), engine: str(it.engine, 40), part_no: str(it.part_no, 60), side: str(it.side, 30),
+        year: int(it.year), fuel: str(it.fuel, 30), engine: str(it.engine, 40), part_no: str(it.part_no, 60), side: str(it.side, 30), color: COLORS.includes(it.color) ? it.color : null, color_code: str(it.color_code, 20),
         condition: ['polovno', 'novo', 'oštećeno'].includes(it.condition) ? it.condition : 'polovno',
         price: num(it.price), negotiable: bool(it.negotiable), description: str(it.description, 4000),
         city: str(it.city, 60) || u.city, images: imgList(it.images), vehicle_id: veh?.id || null,

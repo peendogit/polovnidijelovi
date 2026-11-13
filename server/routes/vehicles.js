@@ -1,11 +1,11 @@
 // Vozila za dijelove (otpadi rastavljaju)
 import { app } from '../router.js';
 import { get, run, all } from '../db.js';
-import { bad, notFound, str, int, imgList, modelById, normalize, searchWords, rateLimit, FUELS } from '../lib.js';
+import { COLORS, bad, notFound, str, int, imgList, modelById, normalize, searchWords, rateLimit, FUELS } from '../lib.js';
 import { vehicleFilter, MODEL_JOIN, MODEL_COLS, sellerOf, fmtVehicleRow, pageArgs, countAndList } from './common.js';
 import { listParts, own } from './parts.js';
 
-const COLS = `v.id, v.year, v.fuel, v.engine, v.engine_code, v.power_kw, v.gearbox, v.drive, v.body, v.city, v.images, v.status, v.created_at, v.user_id,
+const COLS = `v.id, v.year, v.fuel, v.engine, v.engine_code, v.power_kw, v.gearbox, v.drive, v.body, v.color, v.color_code, v.city, v.images, v.status, v.created_at, v.user_id,
   v.make_id, v.model_id, v.model_text, v.mileage, u.name seller_name, u.type seller_type, u.verified seller_verified, u.phone seller_phone, ${MODEL_COLS},
   (SELECT COUNT(*) FROM parts p WHERE p.vehicle_id=v.id AND p.status='active') parts_count`;
 const FROM = `FROM vehicles v JOIN users u ON u.id=v.user_id AND u.blocked=0 ${MODEL_JOIN('v')}`;
@@ -59,12 +59,12 @@ function readVehicle(body, user) {
   const d = {
     make_id, model_id: m ? m.id : null, model_text: str(body.model_text, 80), year,
     fuel: FUELS.includes(body.fuel) ? body.fuel : null, engine: str(body.engine, 40), engine_code: str(body.engine_code, 20),
-    power_kw: int(body.power_kw), gearbox: str(body.gearbox, 30), drive: ['prednji', 'zadnji', '4x4'].includes(body.drive) ? body.drive : null, body: str(body.body, 30), color: str(body.color, 30),
+    power_kw: int(body.power_kw), gearbox: str(body.gearbox, 30), drive: ['prednji', 'zadnji', '4x4'].includes(body.drive) ? body.drive : null, body: str(body.body, 30), color: COLORS.includes(body.color) ? body.color : null, color_code: str(body.color_code, 20),
     mileage: int(body.mileage), description: str(body.description, 4000), city: str(body.city, 60) || user.city,
     images: imgList(body.images),
   };
   const mk = make_id ? get('SELECT name FROM car_make WHERE id=?', make_id) : null;
-  d.search = normalize([mk?.name, m?.name, m?.generation_name, d.model_text, d.engine, d.engine_code, d.description].join(' '));
+  d.search = normalize([mk?.name, m?.name, m?.generation_name, d.model_text, d.engine, d.engine_code, d.color_code, d.description].join(' '));
   return d;
 }
 

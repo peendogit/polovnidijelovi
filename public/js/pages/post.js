@@ -60,6 +60,10 @@ export async function partFormPage({ el, params, query }) {
         <label class="f"><span>Kataloški broj</span><input name="part_no" value="${p.part_no || ''}" placeholder="nije obavezno"></label>
         <label class="f"><span>Strana</span><select name="side"><option value="">—</option>${['lijevo', 'desno', 'prednje', 'zadnje', 'prednje lijevo', 'prednje desno', 'zadnje lijevo', 'zadnje desno'].map(s => html`<option ${p.side === s ? raw('selected') : ''}>${s}</option>`)}</select></label>
       </div>
+      <div class="grid2">
+        <label class="f"><span>Boja</span>${optSelect('color', meta.colors, p.color || src.color)}</label>
+        <label class="f"><span>Kod boje</span><input name="color_code" value="${p.color_code || src.color_code || ''}" placeholder="npr. LC9X" autocapitalize="characters"></label>
+      </div>
       <label class="f"><span>Cijena (KM)</span><input name="price" inputmode="decimal" value="${p.price ?? ''}" placeholder="prazno = na upit"></label>
       <label class="check"><input type="checkbox" name="damaged" ${p.condition === 'oštećeno' ? 'checked' : ''}> Dio je oštećen</label>
       <label class="f"><span>Opis</span><textarea name="description" placeholder="stanje, oštećenja, šta je uključeno, garancija…">${p.description || ''}</textarea></label>
@@ -82,6 +86,7 @@ export async function partFormPage({ el, params, query }) {
     const f = $('#pf', el);
     f.year.value = v.year || ''; f.year.dispatchEvent(new Event('change'));
     f.engine.value = engNum(v.engine); f.fuel.value = v.fuel || '';
+    f.color.value = v.color || ''; f.color_code.value = v.color_code || '';
     if (v.model_text) { $('#mtxt', el).hidden = false; f.model_text.value = v.model_text; }
   });
 
@@ -135,7 +140,10 @@ export async function vehicleFormPage({ el, params }) {
         <label class="f"><span>Pogon</span>${optSelect('drive', DRIVES, v.drive)}</label>
         <label class="f"><span>Karoserija</span>${optSelect('body', BODIES, v.body)}</label>
       </div>
-      <label class="f"><span>Boja</span><input name="color" value="${v.color || ''}"></label>
+      <div class="grid2">
+        <label class="f"><span>Boja</span>${optSelect('color', meta.colors, v.color)}</label>
+        <label class="f"><span>Kod boje</span><input name="color_code" value="${v.color_code || ''}" placeholder="npr. LC9X" autocapitalize="characters"></label>
+      </div>
       <label class="f"><span>Kilometraža</span><input name="mileage" inputmode="numeric" value="${v.mileage || ''}" placeholder="nije obavezno"></label>
       <label class="f"><span>Opis</span><textarea name="description" placeholder="koji dijelovi su dostupni, šta je već prodato, oštećenja…">${v.description || ''}</textarea></label>
       <label class="f"><span>Grad</span>${await citySelect('city', v.city || state.user.city, 'Izaberi grad')}</label>
