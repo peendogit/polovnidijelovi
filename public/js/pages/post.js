@@ -62,7 +62,7 @@ export async function partFormPage({ el, params, query }) {
       </div>
       <div class="grid2">
         <label class="f"><span>Boja</span>${optSelect('color', meta.colors, p.color || src.color)}</label>
-        <label class="f"><span>Kod boje</span><input name="color_code" value="${p.color_code || src.color_code || ''}" placeholder="npr. LC9X" autocapitalize="characters"></label>
+        <label class="f"><span>Kod boje</span><input name="color_code" value="${p.color_code || src.color_code || ''}" placeholder="npr. LC9X" class="caps" autocapitalize="characters" autocomplete="off"></label>
       </div>
       <label class="f"><span>Cijena (KM)</span><input name="price" inputmode="decimal" value="${p.price ?? ''}" placeholder="prazno = na upit"></label>
       <label class="check"><input type="checkbox" name="damaged" ${p.condition === 'oštećeno' ? 'checked' : ''}> Dio je oštećen</label>
@@ -98,6 +98,7 @@ export async function partFormPage({ el, params, query }) {
     if (!v.gen && !f.model_text.trim()) return toast(v.model ? 'Izaberi generaciju (npr. facelift ili ne)' : 'Izaberi marku, model i generaciju', true);
     if (imgs.busy()) return toast('Sačekaj da se slike učitaju', true);
     const b = e.submitter; busy(b, true, 'Snimam…');
+    if (f.color_code) f.color_code = f.color_code.trim().toUpperCase();
     const body = { ...f, make_id: v.make, model_id: v.gen || null, images: imgs.get(), condition: f.damaged ? 'oštećeno' : 'polovno', negotiable: 0 };
     delete body.damaged;
     try {
@@ -132,17 +133,21 @@ export async function vehicleFormPage({ el, params }) {
       </div>
       <div class="grid3">
         <label class="f"><span>Motor</span>${engineSelect('engine', engNum(v.engine) || v.engine)}</label>
-        <label class="f"><span>Šifra motora</span><input name="engine_code" value="${v.engine_code || ''}" placeholder="BKC"></label>
+        <label class="f"><span>Kod motora</span><input name="engine_code" class="caps" value="${v.engine_code || ''}" placeholder="BKC" autocapitalize="characters" autocomplete="off"></label>
         <label class="f"><span>Snaga kW</span><input name="power_kw" inputmode="numeric" value="${v.power_kw || ''}"></label>
       </div>
       <div class="grid3">
         <label class="f"><span>Mjenjač</span>${optSelect('gearbox', GEARBOXES, v.gearbox)}</label>
+        <label class="f"><span>Broj brzina</span>${optSelect('gears', ['4', '5', '6', '7', '8', '9'], v.gears ? String(v.gears) : '')}</label>
+        <label class="f"><span>Kod mjenjača</span><input name="gearbox_code" class="caps" value="${v.gearbox_code || ''}" placeholder="JCR" autocapitalize="characters" autocomplete="off"></label>
+      </div>
+      <div class="grid2">
         <label class="f"><span>Pogon</span>${optSelect('drive', DRIVES, v.drive)}</label>
         <label class="f"><span>Karoserija</span>${optSelect('body', BODIES, v.body)}</label>
       </div>
       <div class="grid2">
         <label class="f"><span>Boja</span>${optSelect('color', meta.colors, v.color)}</label>
-        <label class="f"><span>Kod boje</span><input name="color_code" value="${v.color_code || ''}" placeholder="npr. LC9X" autocapitalize="characters"></label>
+        <label class="f"><span>Kod boje</span><input name="color_code" value="${v.color_code || ''}" placeholder="npr. LC9X" class="caps" autocapitalize="characters" autocomplete="off"></label>
       </div>
       <label class="f"><span>Kilometraža</span><input name="mileage" inputmode="numeric" value="${v.mileage || ''}" placeholder="nije obavezno"></label>
       <label class="f"><span>Opis</span><textarea name="description" placeholder="koji dijelovi su dostupni, šta je već prodato, oštećenja…">${v.description || ''}</textarea></label>
@@ -163,6 +168,7 @@ export async function vehicleFormPage({ el, params }) {
     if (!f.year) return toast('Upiši godište', true);
     if (imgs.busy()) return toast('Sačekaj da se slike učitaju', true);
     const b = e.submitter; busy(b, true, 'Snimam…');
+    for (const k of ['engine_code', 'gearbox_code', 'color_code']) if (f[k]) f[k] = f[k].trim().toUpperCase();
     const body = { ...f, make_id: x.make, model_id: x.gen || null, images: imgs.get() };
     try {
       const r = edit ? await api('/api/vehicles/' + v.id, { method: 'PUT', body }) : await api('/api/vehicles', { body });

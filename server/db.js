@@ -20,6 +20,8 @@ if (!cols('vehicles').includes('color_code')) {
   db.exec('ALTER TABLE vehicles ADD COLUMN color_code TEXT');
   db.exec('UPDATE vehicles SET color_code=color, color=NULL WHERE color IS NOT NULL');
 }
+if (!cols('vehicles').includes('gearbox_code')) db.exec('ALTER TABLE vehicles ADD COLUMN gearbox_code TEXT');
+if (!cols('vehicles').includes('gears')) db.exec('ALTER TABLE vehicles ADD COLUMN gears INTEGER');
 if (!cols('parts').includes('color')) db.exec('ALTER TABLE parts ADD COLUMN color TEXT');
 if (!cols('parts').includes('color_code')) db.exec('ALTER TABLE parts ADD COLUMN color_code TEXT');
 

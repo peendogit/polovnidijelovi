@@ -1,7 +1,7 @@
 // Oglasi za dijelove
 import { app } from '../router.js';
 import { all, get, run } from '../db.js';
-import { COLORS, bad, notFound, forbidden, str, int, num, bool, imgList, modelById, vehicleName, normalize, searchWords, rateLimit } from '../lib.js';
+import { COLORS, upper, bad, notFound, forbidden, str, int, num, bool, imgList, modelById, vehicleName, normalize, searchWords, rateLimit } from '../lib.js';
 import { vehicleFilter, MODEL_JOIN, MODEL_COLS, sellerOf, fmtVehicleRow, pageArgs, countAndList } from './common.js';
 
 const COLS = `p.id, p.title, p.color, p.color_code, p.price, p.negotiable, p.condition, p.city, p.images, p.year, p.engine, p.fuel, p.side, p.part_no, p.status,
@@ -62,7 +62,7 @@ function readPart(body, user) {
   if (vehicle_id && !get('SELECT 1 x FROM vehicles WHERE id=? AND user_id=?', vehicle_id, user.id)) vehicle_id = null;
   const d = {
     title, make_id, model_id: m ? m.id : null, model_text: str(body.model_text, 80), year: int(body.year),
-    fuel: str(body.fuel, 30), engine: str(body.engine, 40), part_no: str(body.part_no, 60), side: str(body.side, 30), color: COLORS.includes(body.color) ? body.color : null, color_code: str(body.color_code, 20),
+    fuel: str(body.fuel, 30), engine: str(body.engine, 40), part_no: str(body.part_no, 60), side: str(body.side, 30), color: COLORS.includes(body.color) ? body.color : null, color_code: upper(body.color_code, 20),
     condition: ['polovno', 'novo', 'oštećeno'].includes(body.condition) ? body.condition : 'polovno',
     price, negotiable: bool(body.negotiable), description: str(body.description, 4000), city: str(body.city, 60) || user.city,
     images: imgList(body.images), vehicle_id,

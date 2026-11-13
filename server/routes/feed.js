@@ -4,7 +4,7 @@
 // POST /api/feed/remove     { kind: 'parts'|'vehicles', ext_ids: [...] }   -> prodato / rastavljeno
 import { app } from '../router.js';
 import { get, run, tx } from '../db.js';
-import { COLORS, HttpError, bad, str, int, num, bool, imgList, normalize, rateLimit } from '../lib.js';
+import { COLORS, upper, gearsInt, HttpError, bad, str, int, num, bool, imgList, normalize, rateLimit } from '../lib.js';
 
 function feedUser(req) {
   const key = req.headers['x-api-key'];
@@ -53,7 +53,7 @@ app.post('/api/feed/vehicles', ({ req, body }) => {
       const m = resolveModel(it);
       const d = {
         make_id: m?.make_id || null, model_id: m?.id || null, model_text: m?.id ? null : str([it.make, it.model].filter(Boolean).join(' '), 80),
-        year: int(it.year), fuel: str(it.fuel, 30), engine: str(it.engine, 40), engine_code: str(it.engine_code, 20), power_kw: int(it.power_kw),
+        year: int(it.year), fuel: str(it.fuel, 30), engine: str(it.engine, 40), engine_code: upper(it.engine_code, 20), gearbox_code: upper(it.gearbox_code, 20), gears: gearsInt(it.gears), power_kw: int(it.power_kw),
         gearbox: str(it.gearbox, 30), drive: ['prednji', 'zadnji', '4x4'].includes(it.drive) ? it.drive : null, body: str(it.body, 30), color: COLORS.includes(it.color) ? it.color : null, color_code: str(it.color_code || (COLORS.includes(it.color) ? null : it.color), 20), mileage: int(it.mileage), description: str(it.description, 4000),
         city: str(it.city, 60) || u.city, images: imgList(it.images),
       };

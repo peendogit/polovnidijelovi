@@ -138,3 +138,5 @@ export function searchWords(q) {
 
 export const COLORS = ['bijela', 'biserno bijela', 'crna', 'siva', 'tamno siva (grafit)', 'srebrena', 'plava', 'tamno plava', 'svijetlo plava', 'tirkizna',
   'crvena', 'bordo', 'narandžasta', 'žuta', 'zlatna', 'zelena', 'tamno zelena', 'maslinasta', 'smeđa', 'bež', 'šampanj', 'bakarna', 'ljubičasta', 'roza', 'mat crna', 'mat siva', 'dvobojna', 'ostalo'];
+export const upper = (v, max) => { const s = str(v, max); return s ? s.toUpperCase() : null; };
+export const gearsInt = v => { const n = int(v); return n >= 4 && n <= 9 ? n : null; };
