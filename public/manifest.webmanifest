@@ -12,14 +12,14 @@
   "lang": "bs",
   "categories": ["shopping", "auto"],
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icons/icon-192.png?v=2", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Traži dio", "short_name": "Traži", "url": "/dijelovi", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Vozila za dijelove", "short_name": "Vozila", "url": "/vozila", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Tražim dio", "url": "/trazim/novi", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Objavi oglas", "short_name": "Objavi", "url": "/objavi", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Traži dio", "short_name": "Traži", "url": "/dijelovi", "icons": [{ "src": "/icons/icon-192.png?v=2", "sizes": "192x192" }] },
+    { "name": "Vozila za dijelove", "short_name": "Vozila", "url": "/vozila", "icons": [{ "src": "/icons/icon-192.png?v=2", "sizes": "192x192" }] },
+    { "name": "Tražim dio", "url": "/trazim/novi", "icons": [{ "src": "/icons/icon-192.png?v=2", "sizes": "192x192" }] },
+    { "name": "Objavi oglas", "short_name": "Objavi", "url": "/objavi", "icons": [{ "src": "/icons/icon-192.png?v=2", "sizes": "192x192" }] }
   ]
 }

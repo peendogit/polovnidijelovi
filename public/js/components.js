@@ -29,7 +29,10 @@ const P = {
   logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
   flag: '<path d="M4 22V4M4 4h13l-2 4 2 4H4"/>',
 };
-export const icon = (name, size = 22, color = 'currentColor', sw = 2) =>
+let wid = 0;
+const WRENCH = (color) => { const id = 'wr' + (++wid); return `<g transform="rotate(45 12 12)"><mask id="${id}"><rect x="-6" y="-6" width="36" height="36" fill="#fff"/><rect x="10.45" y="-1" width="3.1" height="6.4" rx="0.5" fill="#000"/><circle cx="12" cy="19.4" r="1.45" fill="#000"/></mask><g mask="url(#${id})" fill="${color}"><circle cx="12" cy="4.9" r="4"/><rect x="10.7" y="6.5" width="2.6" height="11"/><circle cx="12" cy="19.4" r="2.9"/></g></g>`; };
+export const icon = (name, size = 22, color = 'currentColor', sw = 2) => name === 'wrench'
+  ? raw(`<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">${WRENCH(color)}</svg>`) :
   raw(`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ''}</svg>`);
 
 export const img = (src, cls = 'thumb', alt = '') => src
