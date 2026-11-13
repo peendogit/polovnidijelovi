@@ -149,9 +149,13 @@ export function searchWords(q) {
   return normalize(q).split(' ').filter(w => w.length >= 2).slice(0, 6);
 }
 
-const COLOR_LIST = ['bakarna', 'bež', 'bijela', 'biserno bijela', 'bordo', 'crna', 'crvena', 'dvobojna', 'ljubičasta', 'mat crna', 'mat siva', 'maslinasta',
-  'narandžasta', 'plava', 'roza', 'siva', 'smeđa', 'srebrena', 'svijetlo plava', 'šampanj', 'tamno plava', 'tamno siva (grafit)', 'tamno zelena', 'tirkizna',
-  'zelena', 'zlatna', 'žuta'];
+const COLOR_LIST = ['bež', 'bijela', 'bordo', 'crna', 'crvena', 'ljubičasta', 'narandžasta', 'plava', 'siva', 'smeđa', 'srebrena', 'zelena', 'zlatna', 'žuta'];
+// stare (detaljnije) boje -> glavna boja
+export const COLOR_MERGE = {
+  'biserno bijela': 'bijela', 'mat crna': 'crna', 'tamno siva (grafit)': 'siva', 'mat siva': 'siva',
+  'tamno plava': 'plava', 'svijetlo plava': 'plava', 'tirkizna': 'plava', 'tamno zelena': 'zelena', 'maslinasta': 'zelena',
+  'šampanj': 'bež', 'bakarna': 'smeđa', 'roza': 'ostalo', 'dvobojna': 'ostalo',
+};
 // po abecedi (č, ć, š, ž na svom mjestu); "ostalo" uvijek na kraju
 export const COLORS = [...COLOR_LIST.sort((a, b) => a.localeCompare(b, 'bs')), 'ostalo'];
 export const upper = (v, max) => { const s = str(v, max); return s ? s.toUpperCase() : null; };

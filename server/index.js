@@ -5,8 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
-import { run, UPLOAD_DIR } from './db.js';
-import { HttpError, parseCookies, userFromToken } from './lib.js';
+import { run, tx, UPLOAD_DIR } from './db.js';
+import { HttpError, parseCookies, userFromToken, COLOR_MERGE } from './lib.js';
 import { routes } from './router.js';
 import { renderIndex, sitemap } from './seo.js';
 import './routes/auth.js';
@@ -19,6 +19,9 @@ import './routes/users.js';
 import './routes/upload.js';
 import './routes/admin.js';
 import './routes/feed.js';
+
+// pojednostavljene boje: stare vrijednosti prebaci u glavnu boju
+tx(() => { for (const [from, to] of Object.entries(COLOR_MERGE)) { run('UPDATE parts SET color=? WHERE color=?', to, from); run('UPDATE vehicles SET color=? WHERE color=?', to, from); } });
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUB = path.join(ROOT, 'public');
