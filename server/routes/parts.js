@@ -48,7 +48,8 @@ app.get('/api/parts/:id', ({ params, user }) => {
   return out;
 });
 
-function readPart(body, user) {
+function readPart(body, owner) {
+  const user = owner;
   const title = str(body.title, 120);
   if (!title) throw bad('Upiši naziv dijela');
   let make_id = str(body.make_id, 60), model_id = str(body.model_id, 60);
@@ -64,7 +65,7 @@ function readPart(body, user) {
     title, make_id, model_id: m ? m.id : null, model_text: str(body.model_text, 80), year: int(body.year),
     fuel: str(body.fuel, 30), engine: str(body.engine, 40), part_no: str(body.part_no, 60), side: str(body.side, 30), color: COLORS.includes(body.color) ? body.color : null, color_code: upper(body.color_code, 20),
     condition: ['polovno', 'novo', 'oštećeno'].includes(body.condition) ? body.condition : 'polovno',
-    price, negotiable: bool(body.negotiable), description: str(body.description, 4000), city: str(body.city, 60) || user.city,
+    price, negotiable: bool(body.negotiable), description: str(body.description, 4000), city: owner.city || null,
     images: imgList(body.images), vehicle_id,
   };
   const mk = make_id ? get('SELECT name FROM car_make WHERE id=?', make_id) : null;
@@ -89,7 +90,7 @@ function own(table, id, user) {
 
 app.put('/api/parts/:id', ({ user, body, params }) => {
   const p = own('parts', params.id, user);
-  const d = readPart(body, user);
+  const d = readPart(body, get('SELECT * FROM users WHERE id=?', p.user_id));
   run(`UPDATE parts SET ${Object.keys(d).map(k => k + '=?').join(',')}, updated_at=datetime('now') WHERE id=?`, ...Object.values(d), p.id);
   return { id: p.id };
 }, { auth: true });

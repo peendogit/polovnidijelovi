@@ -291,3 +291,7 @@ fieldset{border:0;margin:0;padding:0}
 /* kodovi (motor, mjenjač, boja) uvijek velikim slovima */
 input.caps{text-transform:uppercase}
 input.caps::placeholder{text-transform:none}
+
+/* lokacija oglasa (iz profila) */
+.loc-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:15px;padding:10px 12px;background:var(--bg);border-radius:var(--r-s)}
+.loc-line a{font-size:13px;color:var(--muted);margin-left:auto}

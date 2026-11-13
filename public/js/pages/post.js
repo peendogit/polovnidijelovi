@@ -67,7 +67,7 @@ export async function partFormPage({ el, params, query }) {
       <label class="f"><span>Cijena (KM)</span><input name="price" inputmode="decimal" value="${p.price ?? ''}" placeholder="prazno = na upit"></label>
       <label class="check"><input type="checkbox" name="damaged" ${p.condition === 'oštećeno' ? 'checked' : ''}> Dio je oštećen</label>
       <label class="f"><span>Opis</span><textarea name="description" placeholder="stanje, oštećenja, šta je uključeno, garancija…">${p.description || ''}</textarea></label>
-      <label class="f"><span>Grad</span>${await citySelect('city', p.city || state.user.city, 'Izaberi grad')}</label>
+      <div class="loc-line">${icon('pin', 18)} Lokacija: <strong>${(edit ? p.city : state.user.city) || 'nije upisana'}</strong> <a href="/profil/postavke">promijeni u profilu</a></div>
     </div>
     <div class="card"><strong style="display:block;margin-bottom:8px">Slike</strong><div id="pi"></div></div>
     <button class="btn accent big block" name="go" value="1">${edit ? 'Sačuvaj izmjene' : 'Objavi dio'}</button>
@@ -151,7 +151,7 @@ export async function vehicleFormPage({ el, params }) {
       </div>
       <label class="f"><span>Kilometraža</span><input name="mileage" inputmode="numeric" value="${v.mileage || ''}" placeholder="nije obavezno"></label>
       <label class="f"><span>Opis</span><textarea name="description" placeholder="koji dijelovi su dostupni, šta je već prodato, oštećenja…">${v.description || ''}</textarea></label>
-      <label class="f"><span>Grad</span>${await citySelect('city', v.city || state.user.city, 'Izaberi grad')}</label>
+      <div class="loc-line">${icon('pin', 18)} Lokacija: <strong>${(edit ? v.city : state.user.city) || 'nije upisana'}</strong> <a href="/profil/postavke">promijeni u profilu</a></div>
     </div>
     <div class="card"><strong style="display:block;margin-bottom:8px">Slike vozila</strong><div id="vi"></div></div>
     <button class="btn accent big block">${edit ? 'Sačuvaj izmjene' : 'Objavi vozilo'}</button>

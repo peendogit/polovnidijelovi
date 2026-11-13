@@ -72,6 +72,12 @@ app.put('/api/me', ({ user, body }) => {
     name, phone, str(body.city, 60), str(body.address, 150), str(body.about, 2000), bool(body.viber), bool(body.whatsapp), bool(body.ships),
     /^\/uploads\/[\w.-]+$/.test(body.logo || '') ? body.logo : null, user.id,
   );
+  // lokacija oglasa je uvijek lokacija iz profila
+  const city = str(body.city, 60);
+  if (city !== user.city) {
+    run('UPDATE parts SET city=? WHERE user_id=?', city, user.id);
+    run('UPDATE vehicles SET city=? WHERE user_id=?', city, user.id);
+  }
   return meOut(get('SELECT * FROM users WHERE id=?', user.id));
 }, { auth: true });
 

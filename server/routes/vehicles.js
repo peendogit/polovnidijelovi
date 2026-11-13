@@ -16,6 +16,7 @@ export function listVehicles(q, extraW = [], extraA = []) {
   w.push(...extraW); a.push(...extraA);
   if (q.fuel) { w.push('v.fuel=?'); a.push(q.fuel); }
   if (q.city) { w.push('v.city=?'); a.push(q.city); }
+  if (q.color) { w.push('v.color=?'); a.push(String(q.color)); }
   if (q.seller) { w.push('v.user_id=?'); a.push(int(q.seller)); }
   if (q.from) { w.push('v.year>=?'); a.push(int(q.from)); }
   if (q.to) { w.push('v.year<=?'); a.push(int(q.to)); }
@@ -48,7 +49,7 @@ app.get('/api/vehicles/:id', ({ params, user }) => {
   return out;
 });
 
-function readVehicle(body, user) {
+function readVehicle(body, owner) {
   let make_id = str(body.make_id, 60);
   const m = modelById(str(body.model_id, 60));
   if (body.model_id && !m) throw bad('Nepoznat model');
@@ -60,7 +61,7 @@ function readVehicle(body, user) {
     make_id, model_id: m ? m.id : null, model_text: str(body.model_text, 80), year,
     fuel: FUELS.includes(body.fuel) ? body.fuel : null, engine: str(body.engine, 40), engine_code: upper(body.engine_code, 20), gearbox_code: upper(body.gearbox_code, 20), gears: gearsInt(body.gears),
     power_kw: int(body.power_kw), gearbox: str(body.gearbox, 30), drive: ['prednji', 'zadnji', '4x4'].includes(body.drive) ? body.drive : null, body: str(body.body, 30), color: COLORS.includes(body.color) ? body.color : null, color_code: upper(body.color_code, 20),
-    mileage: int(body.mileage), description: str(body.description, 4000), city: str(body.city, 60) || user.city,
+    mileage: int(body.mileage), description: str(body.description, 4000), city: owner.city || null,
     images: imgList(body.images),
   };
   const mk = make_id ? get('SELECT name FROM car_make WHERE id=?', make_id) : null;
@@ -78,7 +79,7 @@ app.post('/api/vehicles', ({ user, body }) => {
 
 app.put('/api/vehicles/:id', ({ user, body, params }) => {
   const v = own('vehicles', params.id, user);
-  const d = readVehicle(body, user);
+  const d = readVehicle(body, get('SELECT * FROM users WHERE id=?', v.user_id));
   run(`UPDATE vehicles SET ${Object.keys(d).map(k => k + '=?').join(',')}, updated_at=datetime('now') WHERE id=?`, ...Object.values(d), v.id);
   return { id: v.id };
 }, { auth: true });

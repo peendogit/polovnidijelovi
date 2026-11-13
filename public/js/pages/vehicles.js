@@ -20,6 +20,7 @@ export async function vehiclesPage({ el, query: q }) {
         <button type="button" class="chip ${q.body ? 'on' : ''}" data-x="body">Karoserija${q.body ? ': ' + q.body : ''}</button>
         <button type="button" class="chip ${q.drive ? 'on' : ''}" data-x="drive">Pogon${q.drive ? ': ' + q.drive : ''}</button>
         <button type="button" class="chip ${q.gearbox ? 'on' : ''}" data-x="gearbox">Mjenjač${q.gearbox ? ': ' + q.gearbox : ''}</button>
+        <button type="button" class="chip ${q.color ? 'on' : ''}" data-x="color">Boja${q.color ? ': ' + q.color : ''}</button>
       </div>
       <div id="xf" class="stack" style="gap:10px" hidden>
         <label class="f" data-f="fuel" hidden><span>Gorivo</span><select name="fuel"><option value="">Svejedno</option>${meta.fuels.map(f => html`<option ${q.fuel === f ? raw('selected') : ''}>${f}</option>`)}</select></label>
@@ -31,11 +32,12 @@ export async function vehiclesPage({ el, query: q }) {
         <label class="f" data-f="engine" hidden><span>Motor</span>${engineSelect('engine', q.engine, 'Svi')}</label>
         <label class="f" data-f="body" hidden><span>Karoserija</span>${optSelect('body', BODIES, q.body, 'Sve')}</label>
         <label class="f" data-f="drive" hidden><span>Pogon</span>${optSelect('drive', DRIVES, q.drive, 'Svejedno')}</label>
+        <label class="f" data-f="color" hidden><span>Boja</span>${optSelect('color', meta.colors, q.color, 'Sve')}</label>
         <label class="f" data-f="gearbox" hidden><span>Mjenjač</span>${optSelect('gearbox', GEARBOXES, q.gearbox, 'Svejedno')}</label>
       </div>
       <input type="hidden" name="sort" value="${q.sort || ''}">
       <button class="btn accent big block">${icon('search', 20)} Prikaži vozila</button>
-      ${q.make || q.fuel || q.from || q.to || q.city || q.engine || q.body || q.drive || q.gearbox || q.sort ? html`<a href="/vozila" class="reset-link">Poništi pretragu</a>` : ''}
+      ${q.make || q.fuel || q.from || q.to || q.city || q.engine || q.body || q.drive || q.gearbox || q.color || q.sort ? html`<a href="/vozila" class="reset-link">Poništi pretragu</a>` : ''}
     </form>
   </section>
   <div class="wrap">
@@ -75,7 +77,7 @@ export async function vehiclesPage({ el, query: q }) {
   const submit = () => {
     const v = picker.get();
     const f = formData($('#vf', el));
-    go('/vozila' + qs({ make: v.make, model: v.model, gen: v.gen, fuel: f.fuel, from: f.from, to: f.to, city: f.city, engine: f.engine, body: f.body, drive: f.drive, gearbox: f.gearbox, sort: $('#vs', el).value }), true);
+    go('/vozila' + qs({ make: v.make, model: v.model, gen: v.gen, fuel: f.fuel, from: f.from, to: f.to, city: f.city, engine: f.engine, body: f.body, drive: f.drive, gearbox: f.gearbox, color: f.color, sort: $('#vs', el).value }), true);
   };
   $('#vf', el).onsubmit = e => { e.preventDefault(); submit(); };
   $('#vs', el).onchange = submit;

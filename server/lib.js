@@ -136,7 +136,10 @@ export function searchWords(q) {
   return normalize(q).split(' ').filter(w => w.length >= 2).slice(0, 6);
 }
 
-export const COLORS = ['bijela', 'biserno bijela', 'crna', 'siva', 'tamno siva (grafit)', 'srebrena', 'plava', 'tamno plava', 'svijetlo plava', 'tirkizna',
-  'crvena', 'bordo', 'narandžasta', 'žuta', 'zlatna', 'zelena', 'tamno zelena', 'maslinasta', 'smeđa', 'bež', 'šampanj', 'bakarna', 'ljubičasta', 'roza', 'mat crna', 'mat siva', 'dvobojna', 'ostalo'];
+const COLOR_LIST = ['bakarna', 'bež', 'bijela', 'biserno bijela', 'bordo', 'crna', 'crvena', 'dvobojna', 'ljubičasta', 'mat crna', 'mat siva', 'maslinasta',
+  'narandžasta', 'plava', 'roza', 'siva', 'smeđa', 'srebrena', 'svijetlo plava', 'šampanj', 'tamno plava', 'tamno siva (grafit)', 'tamno zelena', 'tirkizna',
+  'zelena', 'zlatna', 'žuta'];
+// po abecedi (č, ć, š, ž na svom mjestu); "ostalo" uvijek na kraju
+export const COLORS = [...COLOR_LIST.sort((a, b) => a.localeCompare(b, 'bs')), 'ostalo'];
 export const upper = (v, max) => { const s = str(v, max); return s ? s.toUpperCase() : null; };
 export const gearsInt = v => { const n = int(v); return n >= 4 && n <= 9 ? n : null; };
