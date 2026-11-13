@@ -93,7 +93,7 @@ async function tabParts(box) {
     render(box, html`
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
         <a class="btn accent sm" href="/objavi/dio">${icon('plus', 18)} Novi dio</a>
-        ${[['active', 'Aktivni'], ['sold', 'Prodati'], ['hidden', 'Skriveni']].map(([k, l]) => html`<button class="chip light ${st === k ? 'on' : ''}" data-st="${k}">${l}</button>`)}
+
       </div>
       <div class="hint" style="margin-bottom:8px">${r.total} oglasa</div>
       ${listOr(items, p => partRow(p, { noSeller: true, views: true }), 'Nema oglasa u ovoj grupi.')}<div id="mm"></div>`);

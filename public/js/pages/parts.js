@@ -98,8 +98,6 @@ export async function partPage({ el, params }) {
         <strong>${p.user_id === state.user?.id ? 'Tvoj oglas' : 'Administrator — tuđi oglas'}</strong> <span class="hint">· ${p.views} pregleda</span>
         <div class="btns" style="margin-top:10px">
           <a class="btn dark" href="/uredi/dio/${p.id}">${icon('edit', 18, '#fff')} Uredi</a>
-          ${p.status === 'active' ? html`<button class="btn line" data-st="sold">${icon('check', 18)} Prodato</button>` : html`<button class="btn line" data-st="active">Ponovo aktiviraj</button>`}
-          ${p.status === 'active' ? html`<button class="btn line" data-st="hidden">Sakrij</button>` : ''}
           <button class="btn danger" id="del">Obriši</button>
         </div></div>` : ''}
     </div>
@@ -121,7 +119,7 @@ export async function partPage({ el, params }) {
     };
   });
   $('#del', el)?.addEventListener('click', async () => {
-    if (!await confirmBox('Obrisati ovaj oglas zauvijek?', 'Obriši')) return;
+    if (!await confirmBox('Obrisati ovaj oglas? (npr. kad je dio prodat)', 'Obriši')) return;
     try { await api('/api/parts/' + p.id, { method: 'DELETE' }); toast('Obrisano'); go('/profil'); } catch (e) { fail(e); }
   });
 }
