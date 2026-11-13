@@ -304,16 +304,22 @@ export async function avatarUpload(file) {
   return new Promise(resolve => {
     let done = false;
     modal('Namjesti sliku', html`
-      <p class="hint" style="margin:0 0 10px">Pomjeri sliku prstom i uvećaj da u krugu bude ono što želiš.</p>
+      <p class="hint" style="margin:0 0 10px">Pomjeri sliku prstom. Klizačem (ili sa dva prsta) smanji ili uvećaj da u krugu bude ono što želiš.</p>
       <div class="crop" id="cr"><img src="${src}" alt="" draggable="false"><div class="crop-mask"></div></div>
-      <label class="f" style="margin-top:12px"><span>Uvećanje</span><input type="range" id="cz" min="1" max="4" step="0.01" value="1" style="min-height:44px;padding:0;border:0"></label>
+      <label class="f" style="margin-top:12px"><span>Smanji ↔ Uvećaj</span><input type="range" id="cz" min="1" max="4" step="any" value="1" style="min-height:44px;padding:0;border:0"></label>
       <div class="btns" style="margin-top:12px"><button class="btn line" data-close>Odustani</button><button class="btn accent" id="cok">Sačuvaj sliku</button></div>`, (m, close) => {
       const stage = $('#cr', m), img = $('img', stage), zoom = $('#cz', m);
       const S = () => stage.clientWidth;
+      // z=1: cijela slika se vidi u krugu; veći z = uvećanje (do 4x više od "popuni krug")
+      const fit = () => S() / Math.hypot(im.width, im.height); // cijela slika stane u krug
+      const fill = () => Math.max(S() / im.width, S() / im.height);
+      const zMax = () => (fill() / fit()) * 4;
       let z = 1, x = 0, y = 0; // x,y = pomak centra slike od centra kruga (px na ekranu)
-      const base = () => Math.max(S() / im.width, S() / im.height); // slika uvijek pokriva krug
+      const base = fit;
+      zoom.min = '1'; zoom.max = String(zMax()); zoom.step = 'any'; zoom.value = '1';
       const clamp = () => {
-        const k = base() * z, mx = Math.max(0, (im.width * k - S()) / 2), my = Math.max(0, (im.height * k - S()) / 2);
+        const k = base() * z;
+        const mx = Math.abs(im.width * k - S()) / 2, my = Math.abs(im.height * k - S()) / 2;
         x = Math.min(mx, Math.max(-mx, x)); y = Math.min(my, Math.max(-my, y));
       };
       const draw = () => {
@@ -331,14 +337,14 @@ export async function avatarUpload(file) {
         pts.set(e.pointerId, e);
         if (pts.size === 2 && pinch) {
           const [a, b] = [...pts.values()];
-          z = Math.min(4, Math.max(1, pinch.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d));
+          z = Math.min(zMax(), Math.max(1, pinch.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d));
           zoom.value = z;
         } else if (pts.size === 1 && last) { x += e.clientX - last.clientX; y += e.clientY - last.clientY; }
         last = e; draw();
       });
       const up = e => { pts.delete(e.pointerId); pinch = null; last = pts.size ? [...pts.values()][0] : null; };
       stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
-      stage.addEventListener('wheel', e => { e.preventDefault(); z = Math.min(4, Math.max(1, z * (e.deltaY < 0 ? 1.08 : 0.93))); zoom.value = z; draw(); }, { passive: false });
+      stage.addEventListener('wheel', e => { e.preventDefault(); z = Math.min(zMax(), Math.max(1, z * (e.deltaY < 0 ? 1.08 : 0.93))); zoom.value = z; draw(); }, { passive: false });
       new MutationObserver((_, ob) => { if (!document.body.contains(m)) { ob.disconnect(); if (!done) resolve(null); } }).observe(document.body, { childList: true });
       $('#cok', m).onclick = async () => {
         const b = $('#cok', m); busy(b, true, 'Snimam…');

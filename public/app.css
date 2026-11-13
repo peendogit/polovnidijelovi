@@ -267,6 +267,6 @@ fieldset{border:0;margin:0;padding:0}
 .reset-link:hover{color:var(--accent)}
 
 /* namještanje profilne slike u krug */
-.crop{position:relative;width:min(300px,78vw);aspect-ratio:1;margin:0 auto;overflow:hidden;background:#111;border-radius:8px;touch-action:none;cursor:grab;user-select:none}
+.crop{position:relative;width:min(300px,78vw);aspect-ratio:1;margin:0 auto;overflow:hidden;background:#fff;border-radius:8px;touch-action:none;cursor:grab;user-select:none}
 .crop img{position:absolute;left:50%;top:50%;max-width:none;pointer-events:none}
 .crop-mask{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 999px rgba(0,0,0,.6);outline:2px solid rgba(255,255,255,.9);pointer-events:none}
