@@ -55,7 +55,7 @@ app.post('/api/feed/vehicles', ({ req, body }) => {
         make_id: m?.make_id || null, model_id: m?.id || null, model_text: m?.id ? null : str([it.make, it.model].filter(Boolean).join(' '), 80),
         year: int(it.year), fuel: str(it.fuel, 30), engine: str(it.engine, 40), engine_code: upper(it.engine_code, 20), gearbox_code: upper(it.gearbox_code, 20), gears: gearsInt(it.gears), power_kw: int(it.power_kw),
         gearbox: str(it.gearbox, 30), drive: ['prednji', 'zadnji', '4x4'].includes(it.drive) ? it.drive : null, body: str(it.body, 30), color: COLORS.includes(it.color) ? it.color : null, color_code: str(it.color_code || (COLORS.includes(it.color) ? null : it.color), 20), mileage: int(it.mileage), description: str(it.description, 4000),
-        city: str(it.city, 60) || u.city, images: imgList(it.images),
+        city: str(it.city, 60) || u.city, images: imgList(it.images, true),
       };
       d.search = normalize([it.make, it.model, d.engine, d.engine_code, d.description].join(' '));
       upsert('vehicles', u, ext, d); ok++;
@@ -79,7 +79,7 @@ app.post('/api/feed/parts', ({ req, body }) => {
         year: int(it.year), fuel: str(it.fuel, 30), engine: str(it.engine, 40), part_no: str(it.part_no, 60), side: str(it.side, 30), color: COLORS.includes(it.color) ? it.color : null, color_code: str(it.color_code, 20),
         condition: ['polovno', 'novo', 'oštećeno'].includes(it.condition) ? it.condition : 'polovno',
         price: num(it.price), negotiable: bool(it.negotiable), description: str(it.description, 4000),
-        city: str(it.city, 60) || u.city, images: imgList(it.images), vehicle_id: veh?.id || null,
+        city: str(it.city, 60) || u.city, images: imgList(it.images, true), vehicle_id: veh?.id || null,
       };
       d.search = normalize([title, d.part_no, d.engine, d.description, it.make, it.model].join(' '));
       upsert('parts', u, ext, d); ok++;

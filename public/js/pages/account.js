@@ -1,10 +1,10 @@
-import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, setMe, loadMe, partUrl } from '../core.js';
+import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, setMe, loadMe, partUrl, safeNext } from '../core.js';
 import { icon, partRow, vehicleRow, requestRow, listOr, citySelect, pager, pagedList, confirmBox, avatarUpload, contactButtons, verifiedBadge } from '../components.js';
 import { inquiryModal } from './parts.js';
 
 // ---------- prijava / registracija ----------
 export async function loginPage({ el, query }) {
-  if (state.user) return go(query.next || '/profil', true);
+  if (state.user) return go(safeNext(query.next, '/profil'), true);
   setTitle('Prijava');
   render(el, html`
   <section class="page-head"><div class="row"><h1 style="padding-left:12px">Prijava</h1></div></section>
@@ -20,7 +20,7 @@ export async function loginPage({ el, query }) {
   $('#lf', el).onsubmit = async e => {
     e.preventDefault();
     const b = e.submitter; busy(b, true, 'Prijavljujem…');
-    try { setMe(await api('/api/auth/login', { body: formData(e.target) })); toast('Dobro došao!'); go(query.next || '/', true); }
+    try { setMe(await api('/api/auth/login', { body: formData(e.target) })); toast('Dobro došao!'); go(safeNext(query.next, '/'), true); }
     catch (err) { fail(err); busy(b, false); }
   };
 }
@@ -53,7 +53,7 @@ export async function registerPage({ el, query }) {
   $('#rf', el).onsubmit = async e => {
     e.preventDefault();
     const b = e.submitter; busy(b, true, 'Pravim nalog…');
-    try { setMe(await api('/api/auth/register', { body: formData(e.target) })); toast('Nalog napravljen!'); go(query.next || (state.user.type === 'otpad' ? '/objavi' : '/'), true); }
+    try { setMe(await api('/api/auth/register', { body: formData(e.target) })); toast('Nalog napravljen!'); go(safeNext(query.next, null) || (state.user.type === 'otpad' ? '/objavi' : '/'), true); }
     catch (err) { fail(err); busy(b, false); }
   };
 }
@@ -205,7 +205,8 @@ async function tabSettings(box) {
     if (u.has_api_key && !await confirmBox('Napraviti novi ključ? Stari prestaje raditi.', 'Napravi')) return;
     try {
       const r = await api('/api/me/api-key', { body: {} });
-      render($('#ak', box), html`<label class="f"><span>Tvoj API ključ (sačuvaj ga — ne prikazuje se ponovo)</span><input readonly value="${r.api_key}" onclick="this.select()"></label>`);
+      render($('#ak', box), html`<label class="f"><span>Tvoj API ključ (sačuvaj ga — ne prikazuje se ponovo)</span><input readonly value="${r.api_key}" id="akv"></label>`);
+      $('#akv', box).onclick = e => e.target.select();
       loadMe();
     } catch (err) { fail(err); }
   });

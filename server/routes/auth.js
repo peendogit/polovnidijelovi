@@ -32,6 +32,7 @@ app.post('/api/auth/register', (ctx) => {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw bad('Upiši ispravan email');
   if (!phone || phone.length < 6) throw bad('Upiši broj telefona — kupci te zovu na njega');
   if (!body.password || String(body.password).length < 6) throw bad('Lozinka mora imati bar 6 znakova');
+  if (String(body.password).length > 200) throw bad('Lozinka je preduga');
   if (get('SELECT 1 x FROM users WHERE email=?', email)) throw bad('Taj email je već registrovan. Prijavi se.');
   const r = run(
     'INSERT INTO users (type, name, email, phone, city, address, viber, whatsapp, pass_hash) VALUES (?,?,?,?,?,?,?,?,?)',
@@ -40,18 +41,21 @@ app.post('/api/auth/register', (ctx) => {
   const id = Number(r.lastInsertRowid);
   // prvi korisnik postaje administrator
   if (get('SELECT COUNT(*) c FROM users').c === 1) run('UPDATE users SET is_admin=1 WHERE id=?', id);
-  ctx.setCookie = sessionCookie(makeToken(id), secure);
-  return meOut(get('SELECT * FROM users WHERE id=?', id));
+  const nu = get('SELECT * FROM users WHERE id=?', id);
+  ctx.setCookie = sessionCookie(makeToken(nu), secure);
+  return meOut(nu);
 });
 
 app.post('/api/auth/login', (ctx) => {
   const { body, ip, secure } = ctx;
   rateLimit('login:' + ip, 10, 15 * 60e3);
-  const u = get('SELECT * FROM users WHERE email=?', str(body.email, 120)?.toLowerCase());
+  const email = str(body.email, 120)?.toLowerCase();
+  rateLimit('login-acc:' + email, 15, 30 * 60e3); // i po nalogu, da se lozinka ne pogađa sa više adresa
+  const u = get('SELECT * FROM users WHERE email=?', email);
   if (!u || !checkPassword(body.password || '', u.pass_hash)) throw bad('Pogrešan email ili lozinka');
   if (u.blocked) throw bad('Nalog je blokiran');
   run("UPDATE users SET last_login=datetime('now') WHERE id=?", u.id);
-  ctx.setCookie = sessionCookie(makeToken(u.id), secure);
+  ctx.setCookie = sessionCookie(makeToken(u), secure);
   return meOut(u);
 });
 
@@ -81,10 +85,14 @@ app.put('/api/me', ({ user, body }) => {
   return meOut(get('SELECT * FROM users WHERE id=?', user.id));
 }, { auth: true });
 
-app.post('/api/me/password', ({ user, body }) => {
+app.post('/api/me/password', (ctx) => {
+  const { user, body } = ctx;
+  rateLimit('pw:' + user.id, 8, 15 * 60e3);
   if (!checkPassword(body.old || '', user.pass_hash)) throw bad('Stara lozinka nije tačna');
   if (!body.password || String(body.password).length < 6) throw bad('Nova lozinka mora imati bar 6 znakova');
   run('UPDATE users SET pass_hash=? WHERE id=?', hashPassword(body.password), user.id);
+  // stare prijave (drugi uređaji) prestaju važiti; ovaj uređaj dobija novu
+  ctx.setCookie = sessionCookie(makeToken(get('SELECT * FROM users WHERE id=?', user.id)), ctx.secure);
   return { ok: true };
 }, { auth: true });
 

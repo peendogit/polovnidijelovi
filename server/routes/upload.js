@@ -19,7 +19,7 @@ function decode(dataUrl, maxBytes) {
 }
 
 app.post('/api/upload', ({ user, body }) => {
-  rateLimit('up:' + user.id, 600, 3600e3);
+  rateLimit('up:' + user.id, 250, 3600e3);
   const full = decode(body.full, 4e6);
   const thumb = body.thumb ? decode(body.thumb, 6e5) : null;
   const id = Date.now().toString(36) + crypto.randomBytes(6).toString('hex');

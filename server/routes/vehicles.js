@@ -42,6 +42,7 @@ app.get('/api/vehicles/:id', ({ params, user }) => {
   const out = fmtVehicleRow(v);
   delete out.search;
   out.seller = sellerOf(v.user_id);
+  if (!out.seller || (out.seller.blocked && !user?.is_admin)) throw notFound('Vozilo ne postoji ili je uklonjeno');
   out.mine = !!mine;
   out.parts = listParts({ vehicle: v.id, limit: 60 }).items;
   out.fav = user ? !!get("SELECT 1 x FROM favorites WHERE user_id=? AND kind='vehicle' AND item_id=?", user.id, v.id) : false;

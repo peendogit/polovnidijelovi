@@ -115,18 +115,19 @@ function seoList(p, sp) {
 }
 
 export function renderIndex(p, host = SITE, sp = null) {
+  if (!/^[a-z0-9.-]+(:\d+)?$/i.test(host || '')) host = SITE;
   const m = meta(p);
   const title = m.title ? `${m.title} | ${SITE}` : `Polovni auto dijelovi i vozila za dijelove | ${SITE}`;
   const abs = u => (u.startsWith('http') ? u : `https://${host}${u}`);
   const img = abs(m.img || '/icons/og.png');
   if (m.ld?.image) m.ld.image = m.ld.image.map(abs);
   const body = template()
-    .replace(/__TITLE__/g, esc(title))
-    .replace(/__DESC__/g, esc((m.desc || DEF_DESC).slice(0, 300)))
-    .replace(/__IMG__/g, esc(img))
-    .replace('<!--SEO-->', seoList(p, sp))
-    .replace(/__CANON__/g, esc(`https://${host}${m.canon || (p + (sp?.get('stranica') ? '?stranica=' + Number(sp.get('stranica')) : ''))}`))
-    .replace('<!--JSONLD-->', m.ld ? `<script type="application/ld+json">${JSON.stringify(m.ld).replace(/</g, '\\u003c')}</script>` : '');
+    .replace(/__TITLE__/g, () => esc(title))
+    .replace(/__DESC__/g, () => esc((m.desc || DEF_DESC).slice(0, 300)))
+    .replace(/__IMG__/g, () => esc(img))
+    .replace('<!--SEO-->', () => seoList(p, sp))
+    .replace(/__CANON__/g, () => esc(`https://${host}${m.canon || (p + (sp?.get('stranica') ? '?stranica=' + Number(sp.get('stranica')) : ''))}`))
+    .replace('<!--JSONLD-->', () => m.ld ? `<script type="application/ld+json">${JSON.stringify(m.ld).replace(/</g, '\\u003c')}</script>` : '');
   return { status: m.status || 200, body };
 }
 

@@ -33,7 +33,7 @@ export const icon = (name, size = 22, color = 'currentColor', sw = 2) =>
   raw(`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ''}</svg>`);
 
 export const img = (src, cls = 'thumb', alt = '') => src
-  ? html`<img class="${cls}" src="${thumb(src)}" alt="${alt}" loading="lazy" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='${raw(esc(src))}'}">`
+  ? html`<img class="${cls}" src="${thumb(src)}" alt="${alt}" loading="lazy" data-full="${src}">`
   : html`<div class="${cls}" aria-hidden="true">${icon('camera', 22, '#9AA0A8', 1.6)}</div>`;
 
 export const verifiedBadge = v => v ? html`<span class="verified">${icon('shield', 14, '#145C2B', 2.2)} Provjeren otpad</span>` : '';
@@ -413,7 +413,7 @@ export function imageInput(box, images = [], max = 12) {
   let pending = 0;
   const draw = () => {
     render(box, html`<div class="imgs">
-      ${list.map((u, i) => html`<div class="im"><img src="${thumb(u)}" alt="Slika ${i + 1}" onerror="this.src='${raw(esc(u))}'">
+      ${list.map((u, i) => html`<div class="im"><img src="${thumb(u)}" alt="Slika ${i + 1}" data-full="${u}">
         <button type="button" class="rm" data-rm="${i}" aria-label="Ukloni sliku">×</button>
         ${i === 0 ? html`<span class="badge acc main">Glavna</span>` : html`<button type="button" class="badge main" data-first="${i}" style="border:0;cursor:pointer">Glavna?</button>`}</div>`)}
       ${Array.from({ length: pending }, () => html`<div class="im busy"></div>`)}

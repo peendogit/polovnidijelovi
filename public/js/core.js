@@ -218,3 +218,11 @@ export const vehicleUrl = v => withSlug('/vozilo/', v.id, [v.make_name, v.model_
 export function canonical(url) {
   if (location.pathname !== url) history.replaceState(history.state, '', url + location.search + location.hash);
 }
+
+// ako mala sličica ne postoji, prikaži veliku sliku (bez koda u samom HTML-u)
+document.addEventListener('error', e => {
+  const t = e.target;
+  if (t && t.tagName === 'IMG' && t.dataset.full && !t.dataset.f) { t.dataset.f = '1'; t.src = t.dataset.full; }
+}, true);
+// "next" poslije prijave smije biti samo adresa na ovom sajtu
+export const safeNext = (n, def) => (typeof n === 'string' && /^\/(?![\/\\])/.test(n) ? n : def);

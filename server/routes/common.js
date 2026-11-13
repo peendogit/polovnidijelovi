@@ -18,7 +18,7 @@ export const MODEL_JOIN = (alias) => `
 export const MODEL_COLS = `mk.name make_name, mo.name model_name, mo.generation_name, mo.restyling, mo.restyling_second, mo.date_from gen_from, mo.date_to gen_to`;
 
 export function sellerOf(userId) {
-  return get('SELECT id, type, name, phone, viber, whatsapp, city, address, logo, ships, verified, created_at FROM users WHERE id=?', userId);
+  return get('SELECT id, type, name, phone, viber, whatsapp, city, address, logo, ships, verified, created_at, blocked FROM users WHERE id=?', userId);
 }
 
 export function fmtVehicleRow(r) {

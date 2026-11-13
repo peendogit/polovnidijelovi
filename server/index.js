@@ -5,8 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
-import { get, run, UPLOAD_DIR } from './db.js';
-import { HttpError, parseCookies, readToken } from './lib.js';
+import { run, UPLOAD_DIR } from './db.js';
+import { HttpError, parseCookies, userFromToken } from './lib.js';
 import { routes } from './router.js';
 import { renderIndex, sitemap } from './seo.js';
 import './routes/auth.js';
@@ -31,9 +31,14 @@ const TYPES = {
   '.xml': 'application/xml; charset=utf-8',
 };
 
+// Dozvoljeno je samo ono što sajt stvarno koristi (skripte samo sa našeg servera)
+const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
+  + "img-src 'self' https: data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'";
+
 function send(req, res, status, body, type = 'application/json; charset=utf-8', extra = {}) {
   let buf = Buffer.isBuffer(body) ? body : Buffer.from(typeof body === 'string' ? body : JSON.stringify(body));
-  const headers = { 'Content-Type': type, 'X-Content-Type-Options': 'nosniff', ...extra };
+  const headers = { 'Content-Type': type, 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'strict-origin-when-cross-origin', ...extra };
+  if (type.startsWith('text/html')) headers['Content-Security-Policy'] = CSP;
   if (buf.length > 1024 && /json|text|javascript|xml|svg/.test(type) && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
     buf = zlib.gzipSync(buf);
     headers['Content-Encoding'] = 'gzip';
@@ -43,6 +48,8 @@ function send(req, res, status, body, type = 'application/json; charset=utf-8', 
   res.writeHead(status, headers);
   res.end(req.method === 'HEAD' ? undefined : buf);
 }
+
+const safeHost = req => (/^[a-z0-9.-]+(:\d+)?$/i.test(req.headers.host || '') ? req.headers.host : 'polovnidijelovi.com');
 
 function readBody(req, limit) {
   return new Promise((resolve, reject) => {
@@ -73,18 +80,19 @@ function serveFile(req, res, file, cache) {
 }
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, 'http://x');
-  const p = decodeURIComponent(url.pathname);
-  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress;
+  let url, p = '';
+  // IP: zadnja vrijednost u X-Forwarded-For je ona koju je upisao naš Nginx (prve može lažirati posjetilac)
+  const ip = (req.headers['x-forwarded-for'] || '').split(',').pop().trim() || req.socket.remoteAddress;
   try {
+    try { url = new URL(req.url, 'http://x'); p = decodeURIComponent(url.pathname); }
+    catch { throw new HttpError(400, 'Neispravna adresa'); }
+    if (p.includes('\0')) throw new HttpError(400, 'Neispravna adresa');
     // ---------- API ----------
     if (p.startsWith('/api/')) {
       const m = routes.match(req.method, p);
       if (!m) throw new HttpError(404, 'Nepoznata adresa');
       const cookies = parseCookies(req.headers.cookie);
-      const uid = readToken(cookies.pd_s);
-      let user = uid ? get('SELECT * FROM users WHERE id=?', uid) : null;
-      if (user?.blocked) user = null;
+      const user = userFromToken(cookies.pd_s);
       if (m.route.auth && !user) throw new HttpError(401, 'Prijavi se');
       if (m.route.admin && !user?.is_admin) throw new HttpError(403, 'Samo za administratora');
       let body = {};
@@ -108,9 +116,9 @@ const server = http.createServer(async (req, res) => {
       const name = path.basename(p);
       return serveFile(req, res, path.join(UPLOAD_DIR, name), 'public, max-age=31536000, immutable');
     }
-    if (p === '/sitemap.xml') return send(req, res, 200, sitemap(`https://${req.headers.host}`), TYPES['.xml']);
+    if (p === '/sitemap.xml') return send(req, res, 200, sitemap(`https://${safeHost(req)}`), TYPES['.xml']);
     if (p === '/robots.txt') {
-      return send(req, res, 200, `User-agent: *\nDisallow: /api/\nDisallow: /profil\nDisallow: /admin\nSitemap: https://${req.headers.host}/sitemap.xml\n`, TYPES['.txt']);
+      return send(req, res, 200, `User-agent: *\nDisallow: /api/\nDisallow: /profil\nDisallow: /admin\nSitemap: https://${safeHost(req)}/sitemap.xml\n`, TYPES['.txt']);
     }
 
     // ---------- statički fajlovi ----------
@@ -128,6 +136,11 @@ const server = http.createServer(async (req, res) => {
     if (!res.headersSent) send(req, res, status, { error: status === 500 ? 'Greška na serveru' : e.message });
   }
 });
+
+// greška u nekom zakašnjelom zadatku ne smije srušiti cijeli sajt
+process.on('unhandledRejection', e => console.error(new Date().toISOString(), 'unhandledRejection', e));
+server.requestTimeout = 60e3;
+server.headersTimeout = 20e3;
 
 server.listen(PORT, '127.0.0.1', () => console.log(`polovnidijelovi radi na http://127.0.0.1:${PORT}`));
 

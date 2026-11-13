@@ -43,7 +43,7 @@ app.post('/api/admin/users/:id', ({ params, body, user }) => {
 
 // Admin postavi novu lozinku korisniku (kad zaboravi)
 app.post('/api/admin/users/:id/password', ({ params }) => {
-  const pw = crypto.randomBytes(4).toString('hex');
+  const pw = crypto.randomBytes(6).toString('hex');
   run('UPDATE users SET pass_hash=? WHERE id=?', hashPassword(pw), int(params.id));
   return { password: pw };
 }, A);

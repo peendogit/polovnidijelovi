@@ -34,7 +34,7 @@ app.get('/api/parts/:id', ({ params, user }) => {
   if (!p || (p.status === 'hidden' && !mine)) throw notFound('Oglas ne postoji ili je uklonjen');
   if (!mine) run('UPDATE parts SET views=views+1 WHERE id=?', p.id);
   const seller = sellerOf(p.user_id);
-  if (!seller) throw notFound();
+  if (!seller || (seller.blocked && !user?.is_admin)) throw notFound('Oglas ne postoji ili je uklonjen');
   const out = fmtVehicleRow(p);
   delete out.search;
   out.seller = seller;

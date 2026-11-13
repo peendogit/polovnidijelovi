@@ -1,6 +1,8 @@
 // Pomoćne funkcije: greške, lozinke, sesije, oznake modela
 import crypto from 'node:crypto';
-import { get } from './db.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { get, DATA_DIR } from './db.js';
 
 export class HttpError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -25,25 +27,35 @@ export function checkPassword(pw, stored) {
 }
 
 // ---------- sesija: potpisan kolačić ----------
-const SECRET = process.env.SECRET || 'promijeni-me';
-if (SECRET === 'promijeni-me' && process.env.NODE_ENV === 'production') {
-  console.warn('UPOZORENJE: postavi SECRET u .env fajlu!');
+// Tajni ključ: iz .env; ako nije postavljen (ili je ostao početni), napravi se nasumičan i čuva u data/.secret
+function loadSecret() {
+  const env = process.env.SECRET;
+  if (env && env !== 'promijeni-me' && env.length >= 16) return env;
+  const f = path.join(DATA_DIR, '.secret');
+  try { const v = fs.readFileSync(f, 'utf8').trim(); if (v.length >= 32) return v; } catch { /* nema */ }
+  const v = crypto.randomBytes(32).toString('hex');
+  fs.writeFileSync(f, v, { mode: 0o600 });
+  return v;
 }
+const SECRET = loadSecret();
 const DAYS = 60;
-export function makeToken(userId) {
+// Potpis uključuje i dio heša lozinke: promjena lozinke odjavljuje sve stare prijave
+const sign = (uid, exp, passHash) => crypto.createHmac('sha256', SECRET).update(`${uid}.${exp}.${String(passHash).slice(-24)}`).digest('base64url');
+export function makeToken(user) {
   const exp = Date.now() + DAYS * 864e5;
-  const body = `${userId}.${exp}`;
-  const sig = crypto.createHmac('sha256', SECRET).update(body).digest('base64url');
-  return `${body}.${sig}`;
+  return `${user.id}.${exp}.${sign(user.id, exp, user.pass_hash)}`;
 }
-export function readToken(tok) {
+// vraća korisnika ili null
+export function userFromToken(tok) {
   if (!tok) return null;
   const [uid, exp, sig] = String(tok).split('.');
-  if (!uid || !exp || !sig) return null;
-  const good = crypto.createHmac('sha256', SECRET).update(`${uid}.${exp}`).digest('base64url');
-  if (good.length !== sig.length || !crypto.timingSafeEqual(Buffer.from(good), Buffer.from(sig))) return null;
+  if (!/^\d+$/.test(uid || '') || !/^\d+$/.test(exp || '') || !sig) return null;
   if (Number(exp) < Date.now()) return null;
-  return Number(uid);
+  const user = get('SELECT * FROM users WHERE id=?', Number(uid));
+  if (!user || user.blocked) return null;
+  const good = sign(uid, exp, user.pass_hash);
+  if (good.length !== sig.length || !crypto.timingSafeEqual(Buffer.from(good), Buffer.from(sig))) return null;
+  return user;
 }
 export function sessionCookie(token, secure) {
   return `pd_s=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${token ? DAYS * 86400 : 0}${secure ? '; Secure' : ''}`;
@@ -114,11 +126,12 @@ export const num = v => {
   return Number.isFinite(n) ? n : null;
 };
 export const bool = v => (v === true || v === 1 || v === '1' || v === 'true' || v === 'on' ? 1 : 0);
-export function imgList(v) {
+// Korisnici mogu samo slike učitane na sajt; vanjski https linkovi samo kroz API otpada (external=true)
+export function imgList(v, external = false) {
   let a = v;
   if (typeof a === 'string') { try { a = JSON.parse(a); } catch { a = []; } }
   if (!Array.isArray(a)) return '[]';
-  return JSON.stringify(a.filter(x => typeof x === 'string' && (/^\/uploads\/[\w.-]+$/.test(x) || /^https:\/\/[^\s"'<>]+$/.test(x))).slice(0, 12));
+  return JSON.stringify(a.filter(x => typeof x === 'string' && (/^\/uploads\/[\w.-]+$/.test(x) || (external && /^https:\/\/[^\s"'<>\\`]+$/.test(x)))).slice(0, 12));
 }
 export const parseImgs = s => { try { return JSON.parse(s || '[]'); } catch { return []; } };
 
