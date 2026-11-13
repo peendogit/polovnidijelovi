@@ -1,4 +1,4 @@
-import { html, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy, loadMe } from '../core.js';
+import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy, loadMe } from '../core.js';
 import { icon, vehiclePicker, requestRow, citySelect, pager, contactButtons, verifiedBadge, imageInput, suggestModel, confirmBox, gallery, bindGallery } from '../components.js';
 
 export async function requestsPage({ el, query: q }) {
@@ -106,12 +106,21 @@ export async function requestPage({ el, params }) {
         <div class="btns3" style="width:100%">${contactButtons({ phone: o.seller_phone, viber: o.seller_viber, whatsapp: o.seller_whatsapp }, `ponuda za „${r.part}“`)}</div>
       </div>`)}</div>` : html`<div class="empty"><strong>Još nema ponuda</strong>Otpadi su obaviješteni. Ponude će se pojaviti ovdje.</div>`}
       <button class="btn line block" id="close">${r.status === 'open' ? 'Našao sam dio — zatvori zahtjev' : 'Ponovo otvori zahtjev'}</button>` : ''}
-    ${canOffer ? html`<form class="card stack" id="of">
-      <strong style="font-size:17px">${r.my_offer ? 'Tvoja ponuda (možeš izmijeniti)' : 'Pošalji ponudu'}</strong>
+    ${r.my_offer ? html`<div class="card offer-sent" id="ofSent">
+      <div class="os-head">
+        <span class="os-ok">${icon('check', 18, '#145C2B', 2.6)}</span>
+        <div style="flex:1"><strong>Ponuda poslana</strong><div class="hint">${ago(r.my_offer.created_at)} · kupac vidi tvoj broj</div></div>
+        ${canOffer ? html`<button class="icon-btn" id="ofEdit" aria-label="Izmijeni ponudu">${icon('edit', 20)}</button>` : ''}
+      </div>
+      <div class="os-price">${km(r.my_offer.price)}</div>
+      ${r.my_offer.message ? html`<div class="desc">${r.my_offer.message}</div>` : ''}
+    </div>` : ''}
+    ${canOffer ? html`<form class="card stack" id="of" ${r.my_offer ? raw('hidden') : ''}>
+      <strong style="font-size:17px">${r.my_offer ? 'Izmijeni ponudu' : 'Pošalji ponudu'}</strong>
       <label class="f"><span>Cijena (KM)</span><input name="price" inputmode="decimal" value="${r.my_offer?.price ?? ''}" placeholder="npr. 150"></label>
       <label class="f"><span>Poruka</span><textarea name="message" placeholder="stanje, garancija, slanje brzom poštom…">${r.my_offer?.message || ''}</textarea></label>
-      <button class="btn accent big block">${r.my_offer ? 'Sačuvaj ponudu' : 'Pošalji ponudu'}</button>
-      ${r.my_offer ? html`<button type="button" class="btn ghost" id="delOf">Povuci ponudu</button>` : ''}
+      <button class="btn accent big block">${r.my_offer ? 'Sačuvaj izmjene' : 'Pošalji ponudu'}</button>
+      ${r.my_offer ? html`<div class="btns"><button type="button" class="btn line" id="ofCancel">Odustani</button><button type="button" class="btn danger" id="delOf">Povuci ponudu</button></div>` : ''}
       <span class="hint">Kupac vidi tvoju cijenu, poruku i broj telefona.</span>
     </form>` : ''}
     ${!r.mine && !canOffer && r.offers_count !== undefined ? html`<p class="hint">${r.offers_count} ${r.offers_count === 1 ? 'ponuda' : 'ponuda'} do sada.</p>` : ''}
@@ -123,9 +132,11 @@ export async function requestPage({ el, params }) {
   $('#of', el)?.addEventListener('submit', async e => {
     e.preventDefault();
     const b = e.submitter; busy(b, true, 'Šaljem…');
-    try { await api(`/api/requests/${r.id}/offer`, { body: formData(e.target) }); toast('Ponuda poslana kupcu'); requestPage({ el, params }); }
+    try { await api(`/api/requests/${r.id}/offer`, { body: formData(e.target) }); toast(r.my_offer ? 'Ponuda izmijenjena' : 'Ponuda poslana kupcu'); await requestPage({ el, params }); $('#ofSent', el)?.scrollIntoView({ block: 'center' }); }
     catch (err) { fail(err); busy(b, false); }
   });
+  $('#ofEdit', el)?.addEventListener('click', () => { $('#ofSent', el).hidden = true; $('#of', el).hidden = false; $('#of', el).price.focus(); });
+  $('#ofCancel', el)?.addEventListener('click', () => { $('#of', el).hidden = true; $('#ofSent', el).hidden = false; });
   $('#delOf', el)?.addEventListener('click', async () => {
     if (!await confirmBox('Povući ponudu?', 'Povuci')) return;
     try { await api(`/api/requests/${r.id}/offer`, { method: 'DELETE' }); toast('Ponuda povučena'); requestPage({ el, params }); } catch (e) { fail(e); }
