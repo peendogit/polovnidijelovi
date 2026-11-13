@@ -45,7 +45,8 @@ app.get('/api/parts/:id', ({ params, user }) => {
   delete out.search;
   out.seller = seller;
   out.mine = !!mine;
-  out.vehicle_ad = p.vehicle_id ? get("SELECT id, year, engine, images FROM vehicles WHERE id=? AND status<>'hidden'", p.vehicle_id) : null;
+  const va = p.vehicle_id ? get(`SELECT v.id, v.year, v.engine, v.images, v.model_text, ${MODEL_COLS} FROM vehicles v ${MODEL_JOIN('v')} WHERE v.id=? AND v.status<>'hidden'`, p.vehicle_id) : null;
+  out.vehicle_ad = va ? { id: va.id, year: va.year, engine: va.engine, vehicle: fmtVehicleRow(va).vehicle } : null;
   out.fav = user ? !!get("SELECT 1 x FROM favorites WHERE user_id=? AND kind='part' AND item_id=?", user.id, p.id) : false;
   // slični: isti model, drugi oglasi
   out.similar = p.model_id

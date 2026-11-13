@@ -86,7 +86,7 @@ export async function partPage({ el, params }) {
             .filter(x => x[1]).map(([a, b]) => html`<div><dt>${a}</dt><dd>${b}</dd></div>`)}
         </dl>
         ${p.description ? html`<div class="desc">${p.description}</div>` : ''}
-        ${p.vehicle_ad ? html`<a class="cta-row" style="margin-top:14px;background:var(--bg)" href="/vozilo/${p.vehicle_ad.id}"><span class="dot">${icon('car', 20, '#1B1E22')}</span><div><strong>Dio sa vozila ${p.vehicle_ad.year || ''}</strong><span>Pogledaj ostale dijelove sa ovog auta</span></div>${icon('right', 20)}</a>` : ''}
+        ${p.vehicle_ad ? html`<a class="cta-row" style="margin-top:14px;background:var(--bg)" href="/vozilo/${p.vehicle_ad.id}"><span class="dot">${icon('car', 20, '#1B1E22')}</span><div><strong>Skinuto sa vozila</strong><span>${[p.vehicle_ad.vehicle, p.vehicle_ad.year, p.vehicle_ad.engine].filter(Boolean).join(' · ')} — pogledaj ostale dijelove sa ovog auta</span></div>${icon('right', 20)}</a>` : ''}
       </div>
       <div class="det" style="margin-top:10px">
         ${sellerBlock(p.seller)}
