@@ -18,12 +18,9 @@ export async function partsPage({ el, query, params }) {
     <form id="pf" class="stack" style="gap:10px" role="search">
       <div id="pp" class="stack" style="gap:10px"></div>
       <label class="f"><span>Dio ili kataloški broj</span><input name="q" value="${q.q || ''}" placeholder="far, branik, 5G0941005…" autocomplete="off"></label>
-      <div class="grid2">
-        <label class="f"><span>Grad</span>${await citySelect('city', q.city)}</label>
-        <label class="f"><span>Stanje</span><select name="condition"><option value="">Svejedno</option>
-          ${['polovno', 'novo', 'oštećeno'].map(c => html`<option ${q.condition === c ? raw('selected') : ''}>${c}</option>`)}</select></label>
-      </div>
+      <label class="f"><span>Grad</span>${await citySelect('city', q.city)}</label>
       <button class="btn accent big block">${icon('search', 20)} Pretraži</button>
+      ${q.make || q.q || q.city || q.sort ? html`<a href="/dijelovi" class="reset-link">Poništi pretragu</a>` : ''}
     </form>
   </section>
   <div class="wrap">
@@ -39,7 +36,7 @@ export async function partsPage({ el, query, params }) {
   const search = () => {
     const v = picker.get();
     const f = formData($('#pf', el));
-    go('/dijelovi' + qs({ make: v.make, model: v.model, gen: v.gen, q: f.q.trim(), city: f.city, condition: f.condition, sort: $('#ps', el).value }));
+    go('/dijelovi' + qs({ make: v.make, model: v.model, gen: v.gen, q: f.q.trim(), city: f.city, sort: $('#ps', el).value }));
   };
   $('#pf', el).onsubmit = e => { e.preventDefault(); search(); };
   $('#ps', el).onchange = search;
@@ -99,7 +96,7 @@ export async function partPage({ el, params }) {
         ${p.mine ? '' : html`<button class="btn ghost sm" id="rep">${icon('flag', 16)} Prijavi oglas</button>`}
       </div>
       ${p.mine ? html`<div class="det" style="margin-top:10px">
-        <strong>Tvoj oglas</strong> <span class="hint">· ${p.views} pregleda</span>
+        <strong>${p.user_id === state.user?.id ? 'Tvoj oglas' : 'Administrator — tuđi oglas'}</strong> <span class="hint">· ${p.views} pregleda</span>
         <div class="btns" style="margin-top:10px">
           <a class="btn dark" href="/uredi/dio/${p.id}">${icon('edit', 18, '#fff')} Uredi</a>
           ${p.status === 'active' ? html`<button class="btn line" data-st="sold">${icon('check', 18)} Prodato</button>` : html`<button class="btn line" data-st="active">Ponovo aktiviraj</button>`}

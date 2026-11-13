@@ -29,6 +29,7 @@ export async function vehiclesPage({ el, query: q }) {
       </div>
       <input type="hidden" name="sort" value="${q.sort || ''}">
       <button class="btn accent big block">${icon('search', 20)} Prikaži vozila</button>
+      ${q.make || q.fuel || q.from || q.to || q.city || q.q || q.sort ? html`<a href="/vozila" class="reset-link">Poništi pretragu</a>` : ''}
     </form>
   </section>
   <div class="wrap">
@@ -131,7 +132,7 @@ export async function vehiclePage({ el, params }) {
         ${v.mine ? '' : html`<button class="btn ghost sm" id="rep">${icon('flag', 16)} Prijavi</button>`}
       </div>
       ${v.mine ? html`<div class="det" style="margin-top:10px">
-        <strong>Tvoje vozilo</strong> <span class="hint">· ${v.views} pregleda</span>
+        <strong>${v.user_id === state.user?.id ? 'Tvoje vozilo' : 'Administrator — tuđe vozilo'}</strong> <span class="hint">· ${v.views} pregleda</span>
         <div class="btns" style="margin-top:10px">
           <a class="btn accent" href="/objavi/dio?vozilo=${v.id}">${icon('plus', 18)} Dodaj dio</a>
           <a class="btn dark" href="/uredi/vozilo/${v.id}">${icon('edit', 18, '#fff')} Uredi</a>

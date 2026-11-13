@@ -15,6 +15,7 @@ export async function requestsPage({ el, query: q }) {
       <label class="f"><span>Grad</span>${await citySelect('city', q.city)}</label></div>
       ${otpad ? html`<label class="check" style="color:#fff"><input type="checkbox" name="unanswered" ${q.unanswered ? 'checked' : ''}> Samo gdje još nisam ponudio</label>` : ''}
       <button class="btn line block">${icon('search', 18)} Filtriraj</button>
+      ${q.make || q.q || q.city || q.unanswered ? html`<a href="/trazim" class="reset-link">Poništi pretragu</a>` : ''}
     </form>
   </section>
   <div class="wrap"><div class="count-line"><span class="c" id="rc">…</span></div><div id="rl"></div><div id="rm"></div></div>`);
