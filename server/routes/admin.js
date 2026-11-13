@@ -82,6 +82,9 @@ app.post('/api/admin/models', ({ body }) => {
   const from = int(body.from), to = int(body.to);
   if (!from) throw bad('Upiši godinu od');
   const facelift = int(body.facelift) || 0;
+  const dup = get(`SELECT * FROM car_model WHERE make_id=? AND name=? COLLATE NOCASE AND active=1 AND restyling=? AND restyling_second=? AND substr(date_from,1,4)=?`,
+    make_id, name, facelift >= 1 ? 1 : 0, facelift >= 2 ? 1 : 0, String(from));
+  if (dup) throw bad(`Već postoji: ${genLabel(dup)}`);
   const id = crypto.randomUUID();
   run(`INSERT INTO car_model (id, make_id, name, generation_name, restyling, restyling_second, date_from, date_to)
     VALUES (?,?,?,?,?,?,?,?)`, id, make_id, name, str(body.generation_name, 30), facelift >= 1 ? 1 : 0, facelift >= 2 ? 1 : 0,

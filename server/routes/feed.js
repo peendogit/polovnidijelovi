@@ -23,8 +23,9 @@ const MAKE_ALIAS = { vw: 'Volkswagen', mercedes: 'Mercedes-Benz', 'mercedes benz
 // model po id-u (isti id-evi kao u programu otpada) ili po nazivu marke/modela + godištu / rasponu godina generacije
 function resolveModel(it) {
   if (it.model_id) {
-    const m = get('SELECT id, make_id FROM car_model WHERE id=?', String(it.model_id));
-    if (m) return m;
+    let m = get('SELECT id, make_id, merged_into FROM car_model WHERE id=?', String(it.model_id));
+    if (m?.merged_into) m = get('SELECT id, make_id FROM car_model WHERE id=?', m.merged_into) || m;
+    if (m) return { id: m.id, make_id: m.make_id };
   }
   const mkName = String(it.make || '').trim();
   const make = mkName && get('SELECT id FROM car_make WHERE name=? COLLATE NOCASE', MAKE_ALIAS[mkName.toLowerCase()] || mkName);

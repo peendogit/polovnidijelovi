@@ -44,6 +44,51 @@ if (!cnt) {
 }
 
 const norm = a => a.map(v => (v === undefined ? null : typeof v === 'boolean' ? (v ? 1 : 0) : v));
+// ---------- čišćenje duplih generacija (npr. Audi Q7 4M facelift 2019 dva puta) ----------
+// Isti model, isti facelift i ista godina početka = isti auto. Ostaje jedan, ostali se sakriju,
+// a oglasi koji su bili na sakrivenom prebace se na onaj koji ostaje.
+if (!cols('car_model').includes('merged_into')) db.exec('ALTER TABLE car_model ADD COLUMN merged_into TEXT');
+function dedupeModels() {
+  const rows = db.prepare(`SELECT m.*,
+      (SELECT COUNT(*) FROM parts p WHERE p.model_id=m.id) + (SELECT COUNT(*) FROM vehicles v WHERE v.model_id=m.id) + (SELECT COUNT(*) FROM requests r WHERE r.model_id=m.id) used
+    FROM car_model m WHERE m.active=1 AND m.date_from IS NOT NULL`).all();
+  const groups = new Map();
+  for (const r of rows) {
+    const k = [r.make_id, r.name.toLowerCase(), r.restyling ? 1 : 0, r.restyling_second ? 1 : 0, String(r.date_from).slice(0, 4)].join('|');
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(r);
+  }
+  const y = d => (d ? String(d).slice(0, 4) : null);
+  let merged = 0;
+  db.exec('BEGIN');
+  try {
+    for (const g of groups.values()) {
+      if (g.length < 2) continue;
+      // ostaje: onaj koji već ima oglase, pa onaj sa oznakom generacije, pa onaj sa dužim rasponom godina
+      g.sort((a, b) => (b.used > 0) - (a.used > 0) || !!b.generation_name - !!a.generation_name
+        || (Number(y(b.date_to) || 9999) - Number(y(b.date_from))) - (Number(y(a.date_to) || 9999) - Number(y(a.date_from))) || String(a.id).localeCompare(String(b.id)));
+      const [keep, ...rest] = g;
+      // raspon godina: najranije od - najkasnije do (prazno "do" = proizvodi se i danas)
+      const anyOpen = g.some(x => !x.date_to);
+      const to = anyOpen ? null : g.map(x => x.date_to).sort().pop();
+      const gen = keep.generation_name || rest.find(x => x.generation_name)?.generation_name || null;
+      db.prepare('UPDATE car_model SET date_to=?, generation_name=? WHERE id=?').run(to, gen, keep.id);
+      for (const r of rest) {
+        for (const t of ['parts', 'vehicles', 'requests']) db.prepare(`UPDATE ${t} SET model_id=? WHERE model_id=?`).run(keep.id, r.id);
+        db.prepare('UPDATE car_model SET active=0, merged_into=? WHERE id=?').run(keep.id, r.id);
+        merged++;
+      }
+    }
+    db.exec('COMMIT');
+  } catch (e) { db.exec('ROLLBACK'); throw e; }
+  return merged;
+}
+if (!db.prepare("SELECT value FROM settings WHERE key='models_dedup_v1'").get()) {
+  const n = dedupeModels();
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('models_dedup_v1', ?)").run(String(n));
+  if (n) console.log('Spojeno duplih generacija:', n);
+}
+
 export const all = (sql, ...a) => db.prepare(sql).all(...norm(a));
 export const get = (sql, ...a) => db.prepare(sql).get(...norm(a));
 export const run = (sql, ...a) => db.prepare(sql).run(...norm(a));
