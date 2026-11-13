@@ -18,7 +18,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 export const slug = s => normalize(s).replace(/ /g, '-');
 const cut = t => slug(t).slice(0, 80).replace(/-+$/, '');
 const withSlug = (base, id, text) => { const sl = cut(text); return `${base}${id}${sl ? '-' + sl : ''}`; };
-export const partPath = r => withSlug('/dio/', r.id, [r.title, r.part_no].filter(Boolean).join(' '));
+export const partPath = r => withSlug('/dio/', r.id, [r.title, r.model_name || r.model_text, r.part_no].filter(Boolean).join(' '));
 export const vehiclePath = r => withSlug('/vozilo/', r.id, [r.make_name, r.model_name || r.model_text, r.year].filter(Boolean).join(' '));
 
 const SITE = 'polovnidijelovi.com';
@@ -90,7 +90,7 @@ function seoList(p, sp) {
   let rows = [], total = 0, base = p, kind = 'dio';
   const parts = (where, args) => {
     total = get(`SELECT COUNT(*) c FROM parts p WHERE p.status='active' ${where}`, ...args).c;
-    rows = all(`SELECT p.id, p.title t, p.title, p.part_no, k.name mk, mo.name md, p.price FROM parts p LEFT JOIN car_make k ON k.id=p.make_id LEFT JOIN car_model mo ON mo.id=p.model_id
+    rows = all(`SELECT p.id, p.title t, p.title, p.part_no, p.model_text, k.name mk, mo.name md, mo.name model_name, p.price FROM parts p LEFT JOIN car_make k ON k.id=p.make_id LEFT JOIN car_model mo ON mo.id=p.model_id
       WHERE p.status='active' ${where} ORDER BY p.id DESC LIMIT ? OFFSET ?`, ...args, per, off);
   };
   let m;
@@ -138,7 +138,8 @@ export function sitemap(base) {
   for (const r of models) urls.push(`/polovni-dijelovi/${slug(r.make_name)}/${slug(r.model_name)}`);
   for (const r of all(`SELECT v.id, v.year, v.model_text, k.name make_name, mo.name model_name FROM vehicles v LEFT JOIN car_make k ON k.id=v.make_id
       LEFT JOIN car_model mo ON mo.id=v.model_id WHERE v.status='active' ORDER BY v.id DESC LIMIT 5000`)) urls.push(vehiclePath(r));
-  for (const r of all("SELECT id, title, part_no FROM parts WHERE status='active' ORDER BY id DESC LIMIT 40000")) urls.push(partPath(r));
+  for (const r of all(`SELECT p.id, p.title, p.part_no, p.model_text, mo.name model_name FROM parts p LEFT JOIN car_model mo ON mo.id=p.model_id
+      WHERE p.status='active' ORDER BY p.id DESC LIMIT 40000`)) urls.push(partPath(r));
   for (const r of all("SELECT id FROM users WHERE type='otpad' AND blocked=0")) urls.push(`/prodavac/${r.id}`);
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u => `<url><loc>${base}${u}</loc></url>`).join('\n')}\n</urlset>\n`;
 }

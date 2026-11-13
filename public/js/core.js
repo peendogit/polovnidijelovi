@@ -212,7 +212,7 @@ export function slugify(t) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80).replace(/-+$/, '');
 }
 const withSlug = (base, id, text) => { const sl = slugify(text); return `${base}${id}${sl ? '-' + sl : ''}`; };
-export const partUrl = p => withSlug('/dio/', p.id, [p.title, p.part_no].filter(Boolean).join(' '));
+export const partUrl = p => withSlug('/dio/', p.id, [p.title, p.model_name || p.model_text, p.part_no].filter(Boolean).join(' '));
 export const vehicleUrl = v => withSlug('/vozilo/', v.id, [v.make_name, v.model_name || v.model_text, v.year].filter(Boolean).join(' '));
 // ako je otvoren stari/kratki link, zamijeni adresu pravom (bez novog koraka u istoriji)
 export function canonical(url) {

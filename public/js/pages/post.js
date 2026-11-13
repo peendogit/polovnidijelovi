@@ -96,7 +96,7 @@ export async function partFormPage({ el, params, query }) {
       toast(edit ? 'Sačuvano' : 'Dio objavljen');
       if (b?.name === 'next') {
         go('/objavi/dio' + qs({ vozilo: f.vehicle_id, make: v.make, model: v.model, gen: v.gen, year: f.year, engine: f.engine, fuel: f.fuel }), true);
-      } else go(partUrl({ id: r.id, title: f.title, part_no: f.part_no }), true);
+      } else go(partUrl({ id: r.id, title: f.title, model_name: v.model, model_text: f.model_text, part_no: f.part_no }), true);
     } catch (err) { fail(err); busy(b, false); }
   };
 }
