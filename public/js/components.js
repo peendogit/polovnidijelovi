@@ -42,7 +42,7 @@ export const verifiedBadge = v => v ? html`<span class="verified">${icon('shield
 export function partRow(p, opts = {}) {
   const st = p.status && p.status !== 'active' ? html` <span class="badge ${p.status === 'sold' ? 'ok' : ''}">${p.status === 'sold' ? 'Prodato' : 'Skriveno'}</span>` : '';
   return html`<a class="row-item" href="${partUrl(p)}">
-    ${img(p.images?.[0], 'thumb', p.title)}
+    <span class="thumb-wrap">${img(p.images?.[0], 'thumb', p.title)}${p.condition === 'oštećeno' ? html`<span class="dmg">oštećeno</span>` : ''}</span>
     <div class="info">
       <span class="t">${p.title}${st}</span>
       <span class="s">${[p.vehicle || p.model_text, p.year].filter(Boolean).join(' · ')}</span>
@@ -242,7 +242,11 @@ export async function vehiclePicker(box, value = {}, opts = {}) {
     get() {
       const g = gens.find(x => x.id === gn.value);
       const makeName = mk.selectedOptions[0]?.value ? mk.selectedOptions[0].textContent : '';
-      return { make: mk.value, model: md.value, gen: gn.value, makeName, label: [makeName, g ? g.label : md.value].filter(Boolean).join(' ') };
+      // raspon godina: izabrana generacija, ili sve generacije izabranog modela
+      const yFrom = g ? g.from : (md.value && gens.length ? gens.map(x => x.from).filter(Boolean).sort()[0] : null);
+      const yTo = g ? g.to : (md.value && gens.length ? (gens.some(x => !x.to) ? null : gens.map(x => x.to).sort().pop()) : null);
+      return { make: mk.value, model: md.value, gen: gn.value, makeName, label: [makeName, g ? g.label : md.value].filter(Boolean).join(' '),
+        yearFrom: yFrom ? Number(String(yFrom).slice(0, 4)) : null, yearTo: yTo ? Number(String(yTo).slice(0, 4)) : null, hasModel: !!md.value };
     },
     async set(v) { mk.value = v.make || ''; await loadModels(v.make, v.model); if (v.gen) gn.value = v.gen; },
   };
@@ -429,6 +433,31 @@ export function imageInput(box, images = [], max = 12) {
   };
   draw();
   return { get: () => list, busy: () => pending > 0 };
+}
+
+// ---------- godište i motor: padajući meniji ----------
+const THIS_YEAR = new Date().getFullYear();
+// Godište: samo godine izabrane generacije. Poziva se odmah i na svaku promjenu vozila.
+export function bindYear(pickerBox, picker, sel, value, opts = {}) {
+  let cur = value ? String(value) : '';
+  const draw = () => {
+    const v = picker.get();
+    const from = v.yearFrom || 1970, to = Math.min(v.yearTo || THIS_YEAR, THIS_YEAR);
+    const ys = []; for (let y = to; y >= from; y--) ys.push(String(y));
+    if (cur && !ys.includes(cur) && !v.yearFrom) ys.unshift(cur);
+    sel.innerHTML = html`<option value="">${opts.placeholder || (v.yearFrom ? 'Izaberi' : '—')}</option>${ys.map(y => html`<option ${y === cur ? raw('selected') : ''}>${y}</option>`)}`.s;
+    if (!ys.includes(cur)) cur = '';
+  };
+  sel.addEventListener('change', () => { cur = sel.value; });
+  pickerBox.addEventListener('pick', draw);
+  draw();
+}
+// Motor (zapremina): 0.7 do 6.0
+export const ENGINES = Array.from({ length: 54 }, (_, i) => (0.7 + i * 0.1).toFixed(1));
+export function engineSelect(name, value, any = '—') {
+  const v = value ? String(value) : '';
+  const has = v && !ENGINES.includes(v);
+  return html`<select name="${name}"><option value="">${any}</option>${has ? html`<option selected>${v}</option>` : ''}${ENGINES.map(e => html`<option ${e === v ? raw('selected') : ''}>${e}</option>`)}</select>`;
 }
 
 export async function citySelect(name, value, any = 'Svi gradovi') {

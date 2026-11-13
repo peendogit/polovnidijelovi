@@ -283,3 +283,7 @@ fieldset{border:0;margin:0;padding:0}
 .pl-pages a.on{background:var(--dark);color:#fff}
 .pl-pages a:hover{background:#fff;color:var(--text)}
 .pl-pages a.on:hover{background:var(--dark);color:#fff}
+
+/* oznaka "oštećeno" na sličici */
+.thumb-wrap{position:relative;flex-shrink:0;display:block}
+.thumb-wrap .dmg{position:absolute;top:3px;right:3px;background:rgba(180,35,24,.92);color:#fff;font-size:10px;font-weight:700;line-height:1;padding:3px 5px;border-radius:3px;letter-spacing:.2px}

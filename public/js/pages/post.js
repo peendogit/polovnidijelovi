@@ -1,5 +1,8 @@
 import { html, raw, render, $, api, go, qs, setTitle, formData, fail, toast, state, busy, getMeta, partUrl } from '../core.js';
-import { icon, vehiclePicker, imageInput, suggestModel, citySelect } from '../components.js';
+import { icon, vehiclePicker, imageInput, suggestModel, citySelect, bindYear, engineSelect } from '../components.js';
+
+// "1.6 TDI" -> "1.6" (za padajući meni)
+const engNum = e => (String(e || '').match(/\d[.,]\d/) || [''])[0].replace(',', '.');
 
 const needLogin = () => go('/prijava?next=' + encodeURIComponent(location.pathname + location.search), true);
 
@@ -44,8 +47,8 @@ export async function partFormPage({ el, params, query }) {
       <button type="button" class="link" id="nomodel" style="align-self:flex-start">Nema mog modela?</button>
       <label class="f" id="mtxt" ${p.model_text ? '' : raw('hidden')}><span>Upiši marku i model</span><input name="model_text" value="${p.model_text || ''}" placeholder="npr. Volkswagen Golf 8 facelift"></label>
       <div class="grid3">
-        <label class="f"><span>Godište</span><input name="year" inputmode="numeric" maxlength="4" value="${src.year || ''}"></label>
-        <label class="f"><span>Motor</span><input name="engine" value="${src.engine || ''}" placeholder="1.6 TDI"></label>
+        <label class="f"><span>Godište</span><select name="year"></select></label>
+        <label class="f"><span>Motor</span>${engineSelect('engine', engNum(src.engine) || src.engine)}</label>
         <label class="f"><span>Gorivo</span><select name="fuel"><option value="">—</option>${meta.fuels.map(f => html`<option ${src.fuel === f ? raw('selected') : ''}>${f}</option>`)}</select></label>
       </div>
     </div>
@@ -57,11 +60,8 @@ export async function partFormPage({ el, params, query }) {
         <label class="f"><span>Kataloški broj</span><input name="part_no" value="${p.part_no || ''}" placeholder="nije obavezno"></label>
         <label class="f"><span>Strana</span><select name="side"><option value="">—</option>${['lijevo', 'desno', 'prednje', 'zadnje', 'prednje lijevo', 'prednje desno', 'zadnje lijevo', 'zadnje desno'].map(s => html`<option ${p.side === s ? raw('selected') : ''}>${s}</option>`)}</select></label>
       </div>
-      <div class="grid2">
-        <label class="f"><span>Cijena (KM)</span><input name="price" inputmode="decimal" value="${p.price ?? ''}" placeholder="prazno = na upit"></label>
-        <label class="f"><span>Stanje</span><select name="condition">${['polovno', 'novo', 'oštećeno'].map(c => html`<option ${(p.condition || 'polovno') === c ? raw('selected') : ''}>${c}</option>`)}</select></label>
-      </div>
-      <label class="check"><input type="checkbox" name="negotiable" ${p.negotiable ? 'checked' : ''}> Cijena po dogovoru</label>
+      <label class="f"><span>Cijena (KM)</span><input name="price" inputmode="decimal" value="${p.price ?? ''}" placeholder="prazno = na upit"></label>
+      <label class="check"><input type="checkbox" name="damaged" ${p.condition === 'oštećeno' ? 'checked' : ''}> Dio je oštećen</label>
       <label class="f"><span>Opis</span><textarea name="description" placeholder="stanje, oštećenja, šta je uključeno, garancija…">${p.description || ''}</textarea></label>
       <label class="f"><span>Grad</span>${await citySelect('city', p.city || state.user.city, 'Izaberi grad')}</label>
     </div>
@@ -72,13 +72,16 @@ export async function partFormPage({ el, params, query }) {
 
   const picker = await vehiclePicker($('#vp', el), { make: src.make_id, model: src.model_name, gen: src.model_id }, { genRequired: true, anyText: 'Izaberi marku' });
   const imgs = imageInput($('#pi', el), p.images || []);
+  bindYear($('#vp', el), picker, $('#pf select[name=year]', el), src.year);
   $('#nomodel', el).onclick = () => { $('#mtxt', el).hidden = false; const v = picker.get(); suggestModel(v.make, v.makeName); };
   $('#vsel', el)?.addEventListener('change', async e => {
     const v = myVeh.find(x => String(x.id) === e.target.value);
     if (!v) return;
     await picker.set({ make: v.make_id, model: v.model_name, gen: v.model_id });
+    $('#vp', el).dispatchEvent(new Event('pick'));
     const f = $('#pf', el);
-    f.year.value = v.year || ''; f.engine.value = v.engine || ''; f.fuel.value = v.fuel || '';
+    f.year.value = v.year || ''; f.year.dispatchEvent(new Event('change'));
+    f.engine.value = engNum(v.engine); f.fuel.value = v.fuel || '';
     if (v.model_text) { $('#mtxt', el).hidden = false; f.model_text.value = v.model_text; }
   });
 
@@ -90,7 +93,8 @@ export async function partFormPage({ el, params, query }) {
     if (!v.gen && !f.model_text.trim()) return toast(v.model ? 'Izaberi generaciju (npr. facelift ili ne)' : 'Izaberi marku, model i generaciju', true);
     if (imgs.busy()) return toast('Sačekaj da se slike učitaju', true);
     const b = e.submitter; busy(b, true, 'Snimam…');
-    const body = { ...f, make_id: v.make, model_id: v.gen || null, images: imgs.get() };
+    const body = { ...f, make_id: v.make, model_id: v.gen || null, images: imgs.get(), condition: f.damaged ? 'oštećeno' : 'polovno', negotiable: 0 };
+    delete body.damaged;
     try {
       const r = edit ? await api('/api/parts/' + p.id, { method: 'PUT', body }) : await api('/api/parts', { body });
       toast(edit ? 'Sačuvano' : 'Dio objavljen');
@@ -118,11 +122,11 @@ export async function vehicleFormPage({ el, params }) {
       <button type="button" class="link" id="nomodel" style="align-self:flex-start">Nema mog modela?</button>
       <label class="f" id="mtxt" ${v.model_text ? '' : raw('hidden')}><span>Upiši marku i model</span><input name="model_text" value="${v.model_text || ''}"></label>
       <div class="grid2">
-        <label class="f req"><span>Godište</span><input name="year" inputmode="numeric" maxlength="4" value="${v.year || ''}" required></label>
+        <label class="f req"><span>Godište</span><select name="year" required></select></label>
         <label class="f"><span>Gorivo</span><select name="fuel"><option value="">—</option>${meta.fuels.map(f => html`<option ${v.fuel === f ? raw('selected') : ''}>${f}</option>`)}</select></label>
       </div>
       <div class="grid3">
-        <label class="f"><span>Motor</span><input name="engine" value="${v.engine || ''}" placeholder="1.9 TDI"></label>
+        <label class="f"><span>Motor</span>${engineSelect('engine', engNum(v.engine) || v.engine)}</label>
         <label class="f"><span>Šifra motora</span><input name="engine_code" value="${v.engine_code || ''}" placeholder="BKC"></label>
         <label class="f"><span>Snaga kW</span><input name="power_kw" inputmode="numeric" value="${v.power_kw || ''}"></label>
       </div>
@@ -140,6 +144,7 @@ export async function vehicleFormPage({ el, params }) {
   </form>`);
   const picker = await vehiclePicker($('#vp', el), { make: v.make_id, model: v.model_name, gen: v.model_id }, { genRequired: true, anyText: 'Izaberi marku' });
   const imgs = imageInput($('#vi', el), v.images || []);
+  bindYear($('#vp', el), picker, $('#vf select[name=year]', el), v.year);
   $('#nomodel', el).onclick = () => { $('#mtxt', el).hidden = false; const x = picker.get(); suggestModel(x.make, x.makeName); };
   $('#vf', el).onsubmit = async e => {
     e.preventDefault();

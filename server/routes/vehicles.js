@@ -19,6 +19,7 @@ export function listVehicles(q, extraW = [], extraA = []) {
   if (q.seller) { w.push('v.user_id=?'); a.push(int(q.seller)); }
   if (q.from) { w.push('v.year>=?'); a.push(int(q.from)); }
   if (q.to) { w.push('v.year<=?'); a.push(int(q.to)); }
+  if (q.engine) { w.push('v.engine LIKE ?'); a.push(String(q.engine).slice(0, 4) + '%'); }
   for (const word of searchWords(q.q)) { w.push('v.search LIKE ?'); a.push(`%${word}%`); }
   const order = q.sort === 'godiste' ? 'v.year DESC' : q.sort === 'godiste-' ? 'v.year ASC' : 'v.id DESC';
   const { limit, offset, page } = pageArgs(q);

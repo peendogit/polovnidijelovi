@@ -1,6 +1,6 @@
 import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, getMeta } from '../core.js';
 import { vehicleUrl, canonical } from '../core.js';
-import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox } from '../components.js';
+import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, engineSelect } from '../components.js';
 import { inquiryModal, share, reportModal } from './parts.js';
 
 // Vozila za dijelove — filter i lista (nacrt 5)
@@ -17,7 +17,7 @@ export async function vehiclesPage({ el, query: q }) {
         <button type="button" class="chip ${q.fuel ? 'on' : ''}" data-x="fuel">Gorivo${q.fuel ? ': ' + q.fuel : ''}</button>
         <button type="button" class="chip ${q.from || q.to ? 'on' : ''}" data-x="year">Godište${q.from || q.to ? `: ${q.from || ''}–${q.to || ''}` : ''}</button>
         <button type="button" class="chip ${q.city ? 'on' : ''}" data-x="city">Grad${q.city ? ': ' + q.city : ''}</button>
-        <button type="button" class="chip ${q.q ? 'on' : ''}" data-x="q">Motor${q.q ? ': ' + q.q : ''}</button>
+        <button type="button" class="chip ${q.engine || q.q ? 'on' : ''}" data-x="q">Motor${q.engine ? ': ' + q.engine : ''}${q.q ? ' ' + q.q : ''}</button>
       </div>
       <div id="xf" class="stack" style="gap:10px" hidden>
         <label class="f" data-f="fuel" hidden><span>Gorivo</span><select name="fuel"><option value="">Svejedno</option>${meta.fuels.map(f => html`<option ${q.fuel === f ? raw('selected') : ''}>${f}</option>`)}</select></label>
@@ -26,11 +26,14 @@ export async function vehiclesPage({ el, query: q }) {
           <label class="f"><span>do</span><select name="to"><option value="">—</option>${years.map(y => html`<option ${String(y) === q.to ? raw('selected') : ''}>${y}</option>`)}</select></label>
         </div>
         <label class="f" data-f="city" hidden><span>Grad</span>${await citySelect('city', q.city)}</label>
-        <label class="f" data-f="q" hidden><span>Motor / šifra motora</span><input name="q" value="${q.q || ''}" placeholder="1.9 TDI, BKC…"></label>
+        <div class="grid2" data-f="q" hidden>
+          <label class="f"><span>Motor</span>${engineSelect('engine', q.engine, 'Svi')}</label>
+          <label class="f"><span>Šifra motora</span><input name="q" value="${q.q || ''}" placeholder="BKC, CAYC…"></label>
+        </div>
       </div>
       <input type="hidden" name="sort" value="${q.sort || ''}">
       <button class="btn accent big block">${icon('search', 20)} Prikaži vozila</button>
-      ${q.make || q.fuel || q.from || q.to || q.city || q.q || q.sort ? html`<a href="/vozila" class="reset-link">Poništi pretragu</a>` : ''}
+      ${q.make || q.fuel || q.from || q.to || q.city || q.q || q.engine || q.sort ? html`<a href="/vozila" class="reset-link">Poništi pretragu</a>` : ''}
     </form>
   </section>
   <div class="wrap">
@@ -54,7 +57,7 @@ export async function vehiclesPage({ el, query: q }) {
   const submit = () => {
     const v = picker.get();
     const f = formData($('#vf', el));
-    go('/vozila' + qs({ make: v.make, model: v.model, gen: v.gen, fuel: f.fuel, from: f.from, to: f.to, city: f.city, q: f.q.trim(), sort: $('#vs', el).value }), true);
+    go('/vozila' + qs({ make: v.make, model: v.model, gen: v.gen, fuel: f.fuel, from: f.from, to: f.to, city: f.city, engine: f.engine, q: f.q.trim(), sort: $('#vs', el).value }), true);
   };
   $('#vf', el).onsubmit = e => { e.preventDefault(); submit(); };
   $('#vs', el).onchange = submit;

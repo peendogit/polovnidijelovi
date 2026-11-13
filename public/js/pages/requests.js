@@ -1,5 +1,5 @@
 import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy, loadMe } from '../core.js';
-import { icon, vehiclePicker, requestRow, citySelect, pagedList, contactButtons, verifiedBadge, imageInput, suggestModel, confirmBox, gallery, bindGallery } from '../components.js';
+import { icon, vehiclePicker, requestRow, citySelect, pagedList, contactButtons, verifiedBadge, imageInput, suggestModel, confirmBox, gallery, bindGallery, bindYear, engineSelect } from '../components.js';
 
 export async function requestsPage({ el, query: q }) {
   setTitle('Tražim dio');
@@ -48,8 +48,8 @@ export async function newRequestPage({ el, query: q }) {
       <div id="np" class="stack" style="gap:10px"></div>
       <button type="button" class="link" id="nomodel" style="align-self:flex-start">Nema mog modela?</button>
       <label class="f" id="mtxt" hidden><span>Upiši marku i model</span><input name="model_text" placeholder="npr. Volkswagen Golf 8 facelift"></label>
-      <div class="grid2"><label class="f"><span>Godište</span><input name="year" inputmode="numeric" maxlength="4" placeholder="2015"></label>
-      <label class="f"><span>Motor</span><input name="engine" placeholder="1.6 TDI"></label></div>
+      <div class="grid2"><label class="f"><span>Godište</span><select name="year"></select></label>
+      <label class="f"><span>Motor</span>${engineSelect('engine', '')}</label></div>
     </div>
     <div class="card stack">
       <label class="f req"><span>Koji dio tražiš?</span><input name="part" required maxlength="120" value="${q.part || ''}" placeholder="npr. far prednji lijevi"></label>
@@ -62,6 +62,7 @@ export async function newRequestPage({ el, query: q }) {
   </form>`);
   const picker = await vehiclePicker($('#np', el), { make: q.make, model: q.model, gen: q.gen }, { anyText: 'Izaberi marku' });
   const imgs = imageInput($('#ni', el), [], 3);
+  bindYear($('#np', el), picker, $('#nr select[name=year]', el), q.year);
   $('#nomodel', el).onclick = () => { $('#mtxt', el).hidden = false; const v = picker.get(); suggestModel(v.make, v.makeName); };
   $('#nr', el).onsubmit = async e => {
     e.preventDefault();
