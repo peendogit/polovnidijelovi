@@ -305,10 +305,42 @@ export async function avatarUpload(file) {
     let done = false;
     modal('Namjesti sliku', html`
       <p class="hint" style="margin:0 0 10px">Pomjeri sliku prstom. Klizačem (ili sa dva prsta) smanji ili uvećaj da u krugu bude ono što želiš.</p>
-      <div class="crop" id="cr"><img src="${src}" alt="" draggable="false"><div class="crop-mask"></div></div>
+      <div class="crop" id="cr"><img class="crop-bg" src="${src}" alt="" hidden><img class="crop-img" src="${src}" alt="" draggable="false"><div class="crop-mask"></div></div>
+      <div class="f" style="margin-top:12px"><span>Pozadina oko slike</span></div>
+      <div class="bg-pick" id="cbg" role="radiogroup" aria-label="Pozadina oko slike">
+        <button type="button" data-bg="auto" class="on" aria-label="Automatski — boja sa ivice slike"><i id="cauto"></i>Auto</button>
+        <button type="button" data-bg="blur" aria-label="Zamućena slika"><i class="b-blur"></i>Zamućeno</button>
+        <button type="button" data-bg="#FFFFFF" aria-label="Bijela"><i style="background:#fff"></i>Bijela</button>
+        <button type="button" data-bg="#1B1E22" aria-label="Tamna"><i style="background:#1B1E22"></i>Tamna</button>
+        <button type="button" data-bg="#F5B301" aria-label="Žuta"><i style="background:#F5B301"></i>Žuta</button>
+      </div>
       <label class="f" style="margin-top:12px"><span>Smanji ↔ Uvećaj</span><input type="range" id="cz" min="1" max="4" step="any" value="1" style="min-height:44px;padding:0;border:0"></label>
       <div class="btns" style="margin-top:12px"><button class="btn line" data-close>Odustani</button><button class="btn accent" id="cok">Sačuvaj sliku</button></div>`, (m, close) => {
-      const stage = $('#cr', m), img = $('img', stage), zoom = $('#cz', m);
+      const stage = $('#cr', m), img = $('.crop-img', stage), bgImg = $('.crop-bg', stage), zoom = $('#cz', m);
+      // boja sa ivice slike (najčešća boja na rubu) — za logo na jednobojnoj pozadini
+      const edge = (() => {
+        const c = document.createElement('canvas'); c.width = c.height = 48;
+        const g = c.getContext('2d'); g.drawImage(im, 0, 0, 48, 48);
+        const d = g.getImageData(0, 0, 48, 48).data, cnt = new Map();
+        for (let i = 0; i < 48; i++) for (const [px, py] of [[i, 0], [i, 47], [0, i], [47, i]]) {
+          const o = (py * 48 + px) * 4, key = [d[o], d[o + 1], d[o + 2]].map(v => Math.round(v / 24) * 24).join(',');
+          const e = cnt.get(key) || { n: 0, r: 0, g: 0, b: 0 }; e.n++; e.r += d[o]; e.g += d[o + 1]; e.b += d[o + 2]; cnt.set(key, e);
+        }
+        const best = [...cnt.values()].sort((a, b) => b.n - a.n)[0];
+        const h = v => Math.round(v / best.n).toString(16).padStart(2, '0');
+        return '#' + h(best.r) + h(best.g) + h(best.b);
+      })();
+      $('#cauto', m).style.background = edge;
+      let bg = 'auto';
+      const paintBg = () => {
+        bgImg.hidden = bg !== 'blur';
+        stage.style.background = bg === 'auto' || bg === 'blur' ? edge : bg;
+      };
+      paintBg();
+      $('#cbg', m).onclick = e => {
+        const b = e.target.closest('[data-bg]'); if (!b) return;
+        bg = b.dataset.bg; $$('#cbg button', m).forEach(x => x.classList.toggle('on', x === b)); paintBg();
+      };
       const S = () => stage.clientWidth;
       // z=1: cijela slika se vidi u krugu; veći z = uvećanje (do 4x više od "popuni krug")
       const fit = () => S() / Math.hypot(im.width, im.height); // cijela slika stane u krug
@@ -351,7 +383,14 @@ export async function avatarUpload(file) {
         try {
           const out = 512, k = base() * z * (out / S());
           const c = document.createElement('canvas'); c.width = c.height = out;
-          const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, out, out);
+          const g = c.getContext('2d');
+          if (bg === 'blur') {
+            const kc = Math.max(out / im.width, out / im.height) * 1.15;
+            g.fillStyle = edge; g.fillRect(0, 0, out, out);
+            g.filter = 'blur(18px)';
+            g.drawImage(im, (out - im.width * kc) / 2, (out - im.height * kc) / 2, im.width * kc, im.height * kc);
+            g.filter = 'none';
+          } else { g.fillStyle = bg === 'auto' ? edge : bg; g.fillRect(0, 0, out, out); }
           const r = out / S();
           g.drawImage(im, out / 2 + x * r - (im.width * k) / 2, out / 2 + y * r - (im.height * k) / 2, im.width * k, im.height * k);
           const full = c.toDataURL('image/jpeg', 0.88);
