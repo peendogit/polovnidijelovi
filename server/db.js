@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openDb } from './sqlite.js';
+import { runModelsUpdate } from './models-update.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const DATA_DIR = path.resolve(ROOT, process.env.DATA_DIR || 'data');
@@ -87,6 +88,12 @@ if (!db.prepare("SELECT value FROM settings WHERE key='models_dedup_v1'").get())
   const n = dedupeModels();
   db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('models_dedup_v1', ?)").run(String(n));
   if (n) console.log('Spojeno duplih generacija:', n);
+}
+if (!db.prepare("SELECT value FROM settings WHERE key='models_update_2026_11'").get()) {
+  const log = runModelsUpdate(db);
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('models_update_2026_11', ?)").run(JSON.stringify(log));
+  console.log(`Modeli: dodano ${log.added}, ispravljeno ${log.fixed}, sakriveno ${log.hidden}, preimenovano ${log.renamed}`);
+  if (log.missing.length) console.log('Nije pronađeno:', log.missing.join(' | '));
 }
 
 export const all = (sql, ...a) => db.prepare(sql).all(...norm(a));

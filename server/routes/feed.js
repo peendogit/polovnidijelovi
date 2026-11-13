@@ -30,7 +30,7 @@ function resolveModel(it) {
   const mkName = String(it.make || '').trim();
   const make = mkName && get('SELECT id FROM car_make WHERE name=? COLLATE NOCASE', MAKE_ALIAS[mkName.toLowerCase()] || mkName);
   if (!make) return null;
-  const model = String(it.model || '').trim().toLowerCase();
+  const model = String(it.model || '').trim().toLowerCase().replace(/^pasat\b/, 'passat');
   if (model) {
     // kandidati: tačan naziv, naziv + oznaka generacije ("Sportage NQ5"), ili naziv na početku
     const cands = all(`SELECT id, make_id, name, generation_name, restyling, restyling_second, date_from, date_to FROM car_model WHERE make_id=? AND active=1`, make.id)
