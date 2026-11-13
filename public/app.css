@@ -168,9 +168,6 @@ fieldset{border:0;margin:0;padding:0}
 .avatar{width:48px;height:48px;border-radius:24px;background:var(--dark);color:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--head);font-weight:800;font-size:22px;flex-shrink:0;overflow:hidden}
 .avatar img{width:100%;height:100%;object-fit:cover}
 .contact-bar{position:sticky;bottom:64px;z-index:5;background:#fff;border-top:1px solid var(--line);padding:10px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.lightbox{position:fixed;inset:0;background:#000;z-index:60;display:flex;align-items:center;justify-content:center}
-.lightbox img{max-height:100%;max-width:100%;object-fit:contain}
-.lightbox .x{position:absolute;top:8px;right:8px}
 
 /* ---------- slike u formi ---------- */
 .imgs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -245,3 +242,16 @@ fieldset{border:0;margin:0;padding:0}
   .modal{align-items:center}
   .modal .box{border-radius:14px}
 }
+
+/* ---------- slike preko cijelog ekrana ---------- */
+.lightbox{position:fixed;inset:0;background:#000;z-index:60}
+.lb-strip{position:absolute;inset:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior:contain}
+.lb-strip::-webkit-scrollbar{display:none}
+.lb-slide{flex:0 0 100%;height:100%;scroll-snap-align:start;display:flex;align-items:center;justify-content:center}
+.lb-slide img{max-width:100%;max-height:100%;object-fit:contain;touch-action:pan-x pinch-zoom}
+.lb-top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:8px 8px 8px 16px;background:linear-gradient(rgba(0,0,0,.55),transparent)}
+.lb-n{color:#fff;font-weight:700;font-size:15px}
+.lb-x{background:rgba(255,255,255,.12)}
+.lb-prev,.lb-next{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.35);width:48px;height:64px}
+.lb-prev{left:6px}.lb-next{right:6px}
+@media (hover:none){.lb-prev,.lb-next{display:none}}

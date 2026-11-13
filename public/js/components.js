@@ -1,5 +1,5 @@
 // Dijelovi interfejsa koji se ponavljaju
-import { html, raw, render, $, $$, api, esc, km, ago, intlPhone, thumb, getMakes, getMeta, toast, fail, busy, state } from './core.js';
+import { html, raw, render, $, $$, api, esc, km, ago, intlPhone, thumb, getMakes, getMeta, toast, fail, busy, state, pushOverlay } from './core.js';
 
 // ---------- ikone (stroke SVG) ----------
 const P = {
@@ -127,7 +127,7 @@ export function modal(title, body, onMount) {
   m.innerHTML = html`<div class="box" role="dialog" aria-modal="true" aria-label="${title}">
     <div class="mh"><h2>${title}</h2><button class="icon-btn" data-close aria-label="Zatvori">${icon('x')}</button></div>
     ${body}</div>`.s;
-  const close = () => { m.remove(); document.removeEventListener('keydown', onKey); };
+  const close = pushOverlay(() => { m.remove(); document.removeEventListener('keydown', onKey); });
   const onKey = e => { if (e.key === 'Escape') close(); };
   m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-close]')) close(); });
   document.addEventListener('keydown', onKey);
@@ -159,13 +159,44 @@ export function bindGallery(root, images) {
   const n = $('.gallery .gi', root);
   strip.addEventListener('scroll', () => { if (n) n.textContent = Math.round(strip.scrollLeft / strip.clientWidth) + 1; }, { passive: true });
   strip.addEventListener('click', e => {
-    const i = Number(e.target.dataset.i || 0);
-    const lb = document.createElement('div');
-    lb.className = 'lightbox';
-    lb.innerHTML = html`<img src="${images[i]}" alt=""><button class="icon-btn x" aria-label="Zatvori" style="background:rgba(255,255,255,.15)">${icon('x', 24, '#fff')}</button>`.s;
-    lb.onclick = () => lb.remove();
-    document.body.appendChild(lb);
+    if (e.target.dataset.i === undefined) return;
+    lightbox(images, Number(e.target.dataset.i), i => { strip.scrollLeft = i * strip.clientWidth; });
   });
+}
+
+// Slike preko cijelog ekrana: listanje prstom (ili strelicama), "nazad" zatvara
+export function lightbox(images, start = 0, onClose) {
+  const lb = document.createElement('div');
+  lb.className = 'lightbox';
+  lb.setAttribute('role', 'dialog');
+  lb.setAttribute('aria-label', 'Slike');
+  lb.innerHTML = html`<div class="lb-strip">${images.map((s, i) => html`<div class="lb-slide"><img src="${s}" alt="Slika ${i + 1}" ${Math.abs(i - start) > 1 ? raw('loading="lazy"') : ''}></div>`)}</div>
+    <div class="lb-top"><span class="lb-n">${start + 1} / ${images.length}</span><button class="icon-btn lb-x" aria-label="Zatvori">${icon('x', 26, '#fff')}</button></div>
+    ${images.length > 1 ? html`<button class="icon-btn lb-prev" aria-label="Prethodna">${icon('back', 30, '#fff')}</button><button class="icon-btn lb-next" aria-label="Sljedeća">${icon('right', 30, '#fff')}</button>` : ''}`.s;
+  document.body.appendChild(lb);
+  document.body.style.overflow = 'hidden';
+  const st = lb.querySelector('.lb-strip');
+  const n = lb.querySelector('.lb-n');
+  const cur = () => Math.round(st.scrollLeft / st.clientWidth);
+  st.scrollLeft = start * st.clientWidth;
+  st.addEventListener('scroll', () => { n.textContent = `${cur() + 1} / ${images.length}`; }, { passive: true });
+  const to = i => st.scrollTo({ left: Math.max(0, Math.min(images.length - 1, i)) * st.clientWidth, behavior: 'smooth' });
+  const onKey = e => {
+    if (e.key === 'ArrowRight') to(cur() + 1);
+    else if (e.key === 'ArrowLeft') to(cur() - 1);
+    else if (e.key === 'Escape') close();
+  };
+  document.addEventListener('keydown', onKey);
+  const close = pushOverlay(() => {
+    const i = cur();
+    lb.remove();
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', onKey);
+    onClose?.(i);
+  });
+  lb.querySelector('.lb-x').onclick = close;
+  lb.querySelector('.lb-prev')?.addEventListener('click', () => to(cur() - 1));
+  lb.querySelector('.lb-next')?.addEventListener('click', () => to(cur() + 1));
 }
 
 // ---------- izbor vozila: marka → model → generacija ----------

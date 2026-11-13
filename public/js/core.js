@@ -75,7 +75,29 @@ export const route = (pattern, page) => {
   routes.push({ re, keys, page });
 };
 let navId = 0;
+// ---------- prozori preko stranice (slika preko cijelog ekrana, modal, meni) ----------
+// Svaki otvoreni prozor dobije svoj korak u istoriji, pa ga dugme "nazad" na telefonu zatvori.
+const overlays = [];
+let skipPop = 0, backDone = null, backWait = null;
+export function pushOverlay(closeFn) {
+  overlays.push(closeFn);
+  history.pushState({ ov: overlays.length }, '', location.href);
+  // vraća funkciju za zatvaranje iz interfejsa (X, klik pored...)
+  return () => {
+    const i = overlays.indexOf(closeFn);
+    if (i < 0) return;
+    overlays.splice(i, 1);
+    closeFn();
+    skipPop++;
+    backWait = new Promise(r => { backDone = r; });
+    history.back();
+  };
+}
+function closeAllOverlays() { while (overlays.length) overlays.pop()(); }
+
 export async function go(path, replace = false) {
+  if (backWait) await backWait;
+  if (overlays.length) { closeAllOverlays(); replace = true; }
   if (replace) history.replaceState({}, '', path); else history.pushState({}, '', path);
   await dispatch();
   window.scrollTo(0, 0);
@@ -111,11 +133,16 @@ document.addEventListener('click', e => {
   e.preventDefault();
   go(href);
 });
-window.addEventListener('popstate', dispatch);
+window.addEventListener('popstate', () => {
+  if (skipPop) { skipPop--; if (!skipPop) { backDone?.(); backWait = null; } return; }
+  if (overlays.length) { overlays.pop()(); return; } // "nazad" zatvara prozor, stranica ostaje
+  dispatch();
+});
 export function setTitle(t) { document.title = t ? `${t} | polovnidijelovi.com` : 'Polovni auto dijelovi i vozila za dijelove | polovnidijelovi.com'; }
 
 // ---------- meni (drawer) ----------
 export function closeDrawer() { const d = $('#drawer'); if (d) d.hidden = true; }
+export function closeOverlays() { closeAllOverlays(); }
 
 // ---------- formatiranje ----------
 export const km = v => (v === null || v === undefined || v === '' ? 'Na upit' : Number(v).toLocaleString('bs-BA', { maximumFractionDigits: 2 }) + ' KM');

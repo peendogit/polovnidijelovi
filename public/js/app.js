@@ -1,5 +1,5 @@
 // polovnidijelovi.com — pokretanje aplikacije, meni, rute
-import { html, render, $, route, dispatch, loadMe, onMe, state, setTitle, api, go, toast, setMe } from './core.js';
+import { html, render, $, route, dispatch, loadMe, onMe, state, setTitle, api, go, toast, setMe, pushOverlay } from './core.js';
 import { icon } from './components.js';
 import { homePage } from './pages/home.js';
 import { partsPage, partPage } from './pages/parts.js';
@@ -89,8 +89,10 @@ function openDrawer() {
     <hr><a href="/uslovi">Uslovi korištenja</a>
   </div>`);
   d.hidden = false;
-  d.onclick = e => { if (e.target === d || e.target.closest('#dx') || e.target.closest('a')) d.hidden = true; };
-  $('#dlo', d)?.addEventListener('click', async () => { await api('/api/auth/logout', { body: {} }); setMe({ user: null }); d.hidden = true; toast('Odjavljen si'); go('/'); });
+  const close = pushOverlay(() => { d.hidden = true; });
+  // klik na link: go() sam zatvori meni; klik pored ili na X: zatvori kao "nazad"
+  d.onclick = e => { if (e.target === d || e.target.closest('#dx')) close(); };
+  $('#dlo', d)?.addEventListener('click', async () => { await api('/api/auth/logout', { body: {} }); setMe({ user: null }); toast('Odjavljen si'); go('/'); });
 }
 $('#menuBtn').onclick = openDrawer;
 onMe(drawNav);
