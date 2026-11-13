@@ -294,6 +294,70 @@ export async function uploadFile(file) {
   const r = await api('/api/upload', { body: { full, thumb: th } });
   return r.url;
 }
+// ---------- profilna slika / logo: korisnik sam namjesti šta se vidi u krugu ----------
+// Prst: pomjeranje; dva prsta ili klizač: uvećanje. Vraća URL snimljene slike ili null.
+export async function avatarUpload(file) {
+  const bmp = await loadImage(file);
+  const src = toJpeg(bmp, 1600, 0.9);
+  const im = new Image();
+  await new Promise((res, rej) => { im.onload = res; im.onerror = () => rej(new Error('Slika se ne može otvoriti')); im.src = src; });
+  return new Promise(resolve => {
+    let done = false;
+    modal('Namjesti sliku', html`
+      <p class="hint" style="margin:0 0 10px">Pomjeri sliku prstom i uvećaj da u krugu bude ono što želiš.</p>
+      <div class="crop" id="cr"><img src="${src}" alt="" draggable="false"><div class="crop-mask"></div></div>
+      <label class="f" style="margin-top:12px"><span>Uvećanje</span><input type="range" id="cz" min="1" max="4" step="0.01" value="1" style="min-height:44px;padding:0;border:0"></label>
+      <div class="btns" style="margin-top:12px"><button class="btn line" data-close>Odustani</button><button class="btn accent" id="cok">Sačuvaj sliku</button></div>`, (m, close) => {
+      const stage = $('#cr', m), img = $('img', stage), zoom = $('#cz', m);
+      const S = () => stage.clientWidth;
+      let z = 1, x = 0, y = 0; // x,y = pomak centra slike od centra kruga (px na ekranu)
+      const base = () => Math.max(S() / im.width, S() / im.height); // slika uvijek pokriva krug
+      const clamp = () => {
+        const k = base() * z, mx = Math.max(0, (im.width * k - S()) / 2), my = Math.max(0, (im.height * k - S()) / 2);
+        x = Math.min(mx, Math.max(-mx, x)); y = Math.min(my, Math.max(-my, y));
+      };
+      const draw = () => {
+        clamp();
+        const k = base() * z;
+        img.style.width = im.width * k + 'px'; img.style.height = im.height * k + 'px';
+        img.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+      };
+      draw();
+      zoom.oninput = () => { z = Number(zoom.value); draw(); };
+      const pts = new Map(); let last = null, pinch = null;
+      stage.addEventListener('pointerdown', e => { stage.setPointerCapture(e.pointerId); pts.set(e.pointerId, e); last = e; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), z }; } });
+      stage.addEventListener('pointermove', e => {
+        if (!pts.has(e.pointerId)) return;
+        pts.set(e.pointerId, e);
+        if (pts.size === 2 && pinch) {
+          const [a, b] = [...pts.values()];
+          z = Math.min(4, Math.max(1, pinch.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d));
+          zoom.value = z;
+        } else if (pts.size === 1 && last) { x += e.clientX - last.clientX; y += e.clientY - last.clientY; }
+        last = e; draw();
+      });
+      const up = e => { pts.delete(e.pointerId); pinch = null; last = pts.size ? [...pts.values()][0] : null; };
+      stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+      stage.addEventListener('wheel', e => { e.preventDefault(); z = Math.min(4, Math.max(1, z * (e.deltaY < 0 ? 1.08 : 0.93))); zoom.value = z; draw(); }, { passive: false });
+      new MutationObserver((_, ob) => { if (!document.body.contains(m)) { ob.disconnect(); if (!done) resolve(null); } }).observe(document.body, { childList: true });
+      $('#cok', m).onclick = async () => {
+        const b = $('#cok', m); busy(b, true, 'Snimam…');
+        try {
+          const out = 512, k = base() * z * (out / S());
+          const c = document.createElement('canvas'); c.width = c.height = out;
+          const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, out, out);
+          const r = out / S();
+          g.drawImage(im, out / 2 + x * r - (im.width * k) / 2, out / 2 + y * r - (im.height * k) / 2, im.width * k, im.height * k);
+          const full = c.toDataURL('image/jpeg', 0.88);
+          const t = document.createElement('canvas'); t.width = t.height = 160; t.getContext('2d').drawImage(c, 0, 0, 160, 160);
+          const res = await api('/api/upload', { body: { full, thumb: t.toDataURL('image/jpeg', 0.8) } });
+          done = true; close(); resolve(res.url);
+        } catch (err) { fail(err); busy(b, false); }
+      };
+    });
+  });
+}
+
 // images: početna lista; vraća {get()}
 export function imageInput(box, images = [], max = 12) {
   let list = [...images];

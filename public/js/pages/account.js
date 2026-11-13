@@ -1,5 +1,5 @@
 import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, setMe, loadMe } from '../core.js';
-import { icon, partRow, vehicleRow, requestRow, listOr, citySelect, pager, confirmBox, uploadFile, contactButtons, verifiedBadge } from '../components.js';
+import { icon, partRow, vehicleRow, requestRow, listOr, citySelect, pager, confirmBox, avatarUpload, contactButtons, verifiedBadge } from '../components.js';
 import { inquiryModal } from './parts.js';
 
 // ---------- prijava / registracija ----------
@@ -182,7 +182,14 @@ async function tabSettings(box) {
   const f = $('#sf', box);
   $('#lgf', box).onchange = async e => {
     const file = e.target.files[0]; if (!file) return;
-    try { const url = await uploadFile(file); f.logo.value = url; render($('#lg', box), html`<img src="${url}" alt="">`); toast('Slika učitana — klikni Sačuvaj'); } catch (err) { fail(err); }
+    e.target.value = '';
+    try {
+      const url = await avatarUpload(file);
+      if (!url) return;
+      f.logo.value = url; render($('#lg', box), html`<img src="${url}" alt="">`);
+      setMe(await api('/api/me', { method: 'PUT', body: formData(f) }));
+      toast('Slika sačuvana');
+    } catch (err) { fail(err); }
   };
   f.onsubmit = async e => {
     e.preventDefault();
