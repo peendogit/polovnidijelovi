@@ -1,4 +1,4 @@
-import { html, raw, render, $, api, go, qs, setTitle, formData, fail, toast, state, busy, getMeta } from '../core.js';
+import { html, raw, render, $, api, go, qs, setTitle, formData, fail, toast, state, busy, getMeta, partUrl } from '../core.js';
 import { icon, vehiclePicker, imageInput, suggestModel, citySelect } from '../components.js';
 
 const needLogin = () => go('/prijava?next=' + encodeURIComponent(location.pathname + location.search), true);
@@ -96,7 +96,7 @@ export async function partFormPage({ el, params, query }) {
       toast(edit ? 'Sačuvano' : 'Dio objavljen');
       if (b?.name === 'next') {
         go('/objavi/dio' + qs({ vozilo: f.vehicle_id, make: v.make, model: v.model, gen: v.gen, year: f.year, engine: f.engine, fuel: f.fuel }), true);
-      } else go('/dio/' + r.id, true);
+      } else go(partUrl({ id: r.id, title: f.title, part_no: f.part_no }), true);
     } catch (err) { fail(err); busy(b, false); }
   };
 }

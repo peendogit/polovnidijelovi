@@ -1,4 +1,4 @@
-import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy } from '../core.js';
+import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy, partUrl, canonical } from '../core.js';
 import { icon, vehiclePicker, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox } from '../components.js';
 
 // Lista dijelova; /dijelovi?make=&model=&gen=&q=&city=&sort=
@@ -66,7 +66,8 @@ export async function partsPage({ el, query, params }) {
 export async function partPage({ el, params }) {
   const p = await api('/api/parts/' + encodeURIComponent(params.id));
   setTitle(`${p.title} ${p.vehicle || ''}`);
-  const ctxText = `${p.title} ${p.vehicle || ''} — ${location.origin}/dio/${p.id}`;
+  canonical(partUrl(p));
+  const ctxText = `${p.title} ${p.vehicle || ''} — ${location.origin}${partUrl(p)}`;
   render(el, html`
   <div class="det-grid">
     <div>${gallery(p.images, p.title)}</div>

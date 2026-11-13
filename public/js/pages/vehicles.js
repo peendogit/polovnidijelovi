@@ -1,4 +1,5 @@
 import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, getMeta } from '../core.js';
+import { vehicleUrl, canonical } from '../core.js';
 import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox } from '../components.js';
 import { inquiryModal, share, reportModal } from './parts.js';
 
@@ -106,6 +107,7 @@ export async function vehiclePage({ el, params }) {
   const v = await api('/api/vehicles/' + encodeURIComponent(params.id));
   const name = v.vehicle || v.model_text;
   setTitle(`${name} ${v.year || ''} — vozilo za dijelove`);
+  canonical(vehicleUrl(v));
   render(el, html`
   <div class="det-grid">
     <div>${gallery(v.images, name)}</div>
@@ -123,7 +125,7 @@ export async function vehiclePage({ el, params }) {
       </div>
       <div class="det" style="margin-top:10px" id="pitaj">
         ${sellerBlock(v.seller)}
-        <div class="btns3" style="margin-top:12px">${contactButtons(v.seller, `${name} ${v.year || ''} — ${location.origin}/vozilo/${v.id}`)}</div>
+        <div class="btns3" style="margin-top:12px">${contactButtons(v.seller, `${name} ${v.year || ''} — ${location.origin}${vehicleUrl(v)}`)}</div>
         ${v.mine ? '' : html`<button class="btn dark block big" id="ask" style="margin-top:8px">${icon('chat', 18, '#fff')} Pitaj za dio sa ovog vozila</button>`}
       </div>
       <div class="det" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">

@@ -1,5 +1,5 @@
 // Dijelovi interfejsa koji se ponavljaju
-import { html, raw, render, $, $$, api, esc, km, ago, intlPhone, thumb, getMakes, getMeta, toast, fail, busy, state, pushOverlay, nav, listCache, pageKey, qs } from './core.js';
+import { html, raw, render, $, $$, api, esc, km, ago, intlPhone, thumb, getMakes, getMeta, toast, fail, busy, state, pushOverlay, nav, listCache, pageKey, qs, partUrl, vehicleUrl } from './core.js';
 
 // ---------- ikone (stroke SVG) ----------
 const P = {
@@ -41,7 +41,7 @@ export const verifiedBadge = v => v ? html`<span class="verified">${icon('shield
 // ---------- kartice ----------
 export function partRow(p, opts = {}) {
   const st = p.status && p.status !== 'active' ? html` <span class="badge ${p.status === 'sold' ? 'ok' : ''}">${p.status === 'sold' ? 'Prodato' : 'Skriveno'}</span>` : '';
-  return html`<a class="row-item" href="/dio/${p.id}">
+  return html`<a class="row-item" href="${partUrl(p)}">
     ${img(p.images?.[0], 'thumb', p.title)}
     <div class="info">
       <span class="t">${p.title}${st}</span>
@@ -54,7 +54,7 @@ export function partRow(p, opts = {}) {
 
 export function vehicleRow(v, opts = {}) {
   const st = v.status && v.status !== 'active' ? html` <span class="badge">${v.status === 'done' ? 'Rastavljeno' : 'Skriveno'}</span>` : '';
-  return html`<a class="row-item" href="/vozilo/${v.id}">
+  return html`<a class="row-item" href="${vehicleUrl(v)}">
     ${img(v.images?.[0], 'thumb lg', v.vehicle)}
     <div class="info">
       <span class="t">${v.vehicle || v.model_text}${st}</span>
@@ -67,17 +67,17 @@ export function vehicleRow(v, opts = {}) {
 
 export function vehicleCard(v) {
   return html`<div class="vcard">
-    <a href="/vozilo/${v.id}" class="ph" style="text-decoration:none">${v.images?.[0] ? html`<img src="${v.images[0]}" alt="${v.vehicle}" loading="lazy">` : icon('car', 40, '#9AA0A8', 1.4)}
+    <a href="${vehicleUrl(v)}" class="ph" style="text-decoration:none">${v.images?.[0] ? html`<img src="${v.images[0]}" alt="${v.vehicle}" loading="lazy">` : icon('car', 40, '#9AA0A8', 1.4)}
       <span class="badge dark">Rastavlja se</span></a>
     <div class="body">
-      <a href="/vozilo/${v.id}" style="text-decoration:none">
+      <a href="${vehicleUrl(v)}" style="text-decoration:none">
         <div class="name">${v.vehicle || v.model_text}</div>
         <div class="meta">${[v.year, v.fuel, v.engine, v.power_kw ? v.power_kw + ' kW' : null, v.city].filter(Boolean).join(' · ')}</div>
       </a>
       <div class="meta" style="display:flex;align-items:center;gap:6px;color:#3B414A">${icon('pin', 16)} ${v.seller_name}${v.seller_verified ? html` ${verifiedBadge(1)}` : ''}</div>
       <div class="btns">
         ${v.seller_phone ? html`<a class="btn accent" href="tel:${intlPhone(v.seller_phone)}">${icon('phone', 17)} Pozovi</a>` : ''}
-        <a class="btn line" href="/vozilo/${v.id}#pitaj">Pitaj za dio</a>
+        <a class="btn line" href="${vehicleUrl(v)}#pitaj">Pitaj za dio</a>
       </div>
     </div>
   </div>`;

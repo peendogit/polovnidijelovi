@@ -1,4 +1,4 @@
-import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, setMe, loadMe } from '../core.js';
+import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, setMe, loadMe, partUrl } from '../core.js';
 import { icon, partRow, vehicleRow, requestRow, listOr, citySelect, pager, pagedList, confirmBox, avatarUpload, contactButtons, verifiedBadge } from '../components.js';
 import { inquiryModal } from './parts.js';
 
@@ -113,7 +113,7 @@ async function tabInquiries(box) {
   const items = await api('/api/my/inquiries');
   render(box, items.length ? html`<div class="list">${items.map(i => html`<div class="row-item" style="flex-direction:column;gap:6px" data-id="${i.id}">
     <div style="display:flex;justify-content:space-between;width:100%;gap:8px"><strong>${i.name}</strong><span class="hint">${ago(i.created_at)}${i.seen ? '' : html` <span class="badge acc">novo</span>`}</span></div>
-    ${i.part_id ? html`<a class="hint" href="/dio/${i.part_id}">Dio: ${i.part_title || 'oglas'}</a>` : i.vehicle_id ? html`<a class="hint" href="/vozilo/${i.vehicle_id}">Vozilo: ${i.vehicle || 'pogledaj'}</a>` : ''}
+    ${i.part_id ? html`<a class="hint" href="${partUrl({ id: i.part_id, title: i.part_title })}">Dio: ${i.part_title || 'oglas'}</a>` : i.vehicle_id ? html`<a class="hint" href="/vozilo/${i.vehicle_id}">Vozilo: ${i.vehicle || 'pogledaj'}</a>` : ''}
     <div class="desc">${i.message}</div>
     <div class="btns3" style="width:100%">${contactButtons({ phone: i.phone, viber: 1, whatsapp: 1 }, '')}</div>
     <button class="link" data-del="${i.id}" style="align-self:flex-end;font-size:13px;color:var(--muted)">Obriši</button>
