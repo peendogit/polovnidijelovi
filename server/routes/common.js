@@ -7,7 +7,8 @@ export function vehicleFilter(q, alias) {
   const w = []; const a = [];
   if (q.gen) { w.push(`${alias}.model_id=?`); a.push(q.gen); }
   else if (q.make && q.model) {
-    w.push(`${alias}.model_id IN (SELECT id FROM car_model WHERE make_id=? AND name=?)`); a.push(q.make, q.model);
+    // i oglasi bez tačne generacije (npr. iz programa otpada) sa istim nazivom modela
+    w.push(`(${alias}.model_id IN (SELECT id FROM car_model WHERE make_id=? AND name=?) OR (${alias}.model_id IS NULL AND ${alias}.make_id=? AND ${alias}.model_text=?))`); a.push(q.make, q.model, q.make, q.model);
   } else if (q.make) { w.push(`${alias}.make_id=?`); a.push(q.make); }
   return [w, a];
 }
