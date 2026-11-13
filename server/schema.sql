@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS users (
   ships INTEGER DEFAULT 0,                 -- šalje brzom poštom
   pass_hash TEXT NOT NULL,
   verified INTEGER DEFAULT 0,              -- "Provjeren otpad"
+  email_verified INTEGER DEFAULT 0,
   is_admin INTEGER DEFAULT 0,
   blocked INTEGER DEFAULT 0,
   api_key TEXT,
@@ -154,6 +155,9 @@ CREATE TABLE IF NOT EXISTS inquiries (
   vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE SET NULL,
   part_id INTEGER REFERENCES parts(id) ON DELETE SET NULL,
   message TEXT NOT NULL,
+  phone_norm TEXT,
+  ip TEXT,
+  spam INTEGER DEFAULT 0,
   seen INTEGER DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -191,4 +195,20 @@ CREATE TABLE IF NOT EXISTS reports (
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT
+);
+
+-- jednokratni linkovi (potvrda emaila, nova lozinka)
+CREATE TABLE IF NOT EXISTS tokens (
+  token TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,            -- verify | reset
+  expires_at INTEGER NOT NULL
+);
+
+-- blokirani telefoni / IP adrese (spam)
+CREATE TABLE IF NOT EXISTS blocklist (
+  value TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,            -- phone | ip
+  reason TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

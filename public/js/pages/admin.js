@@ -5,19 +5,19 @@ export async function adminPage({ el, params }) {
   if (!state.user?.is_admin) return go('/', true);
   setTitle('Administracija');
   const tab = params.tab || 'pregled';
-  const tabs = [['pregled', 'Pregled'], ['korisnici', 'Korisnici'], ['modeli', 'Modeli'], ['prijave', 'Prijave']];
+  const tabs = [['pregled', 'Pregled'], ['korisnici', 'Korisnici'], ['modeli', 'Modeli'], ['prijave', 'Prijave'], ['spam', 'Spam']];
   render(el, html`
   <section class="page-head" style="padding-bottom:8px"><div class="row"><h1 style="padding-left:12px">Administracija</h1></div></section>
   <nav class="tabs">${tabs.map(t => html`<a href="/admin/${t[0]}" class="${t[0] === tab ? 'on' : ''}">${t[1]}</a>`)}</nav>
   <div class="wrap" style="padding-top:14px" id="at"></div>`);
   const box = $('#at', el);
-  await ({ pregled: overview, korisnici: users, modeli: models, prijave: reports }[tab] || overview)(box);
+  await ({ pregled: overview, korisnici: users, modeli: models, prijave: reports, spam }[tab] || overview)(box);
 }
 
 async function overview(box) {
   const s = await api('/api/admin/stats');
   const items = [['Korisnika', s.users], ['Otpada', s.otpadi], ['Aktivnih dijelova', s.parts], ['Vozila za dijelove', s.vehicles], ['Otvorenih zahtjeva', s.requests],
-    ['Ponuda ukupno', s.offers], ['Upita (30 dana)', s.inquiries], ['Novih korisnika (7 dana)', s.new_users_7d], ['Novih prijava', s.reports], ['Prijedloga modela', s.suggestions]];
+    ['Ponuda ukupno', s.offers], ['Upita (30 dana)', s.inquiries], ['Novih korisnika (7 dana)', s.new_users_7d], ['Novih prijava', s.reports], ['Blokiranih (spam)', s.spam_blocked], ['Prijedloga modela', s.suggestions]];
   render(box, html`<div class="stats">${items.map(([l, v]) => html`<div class="stat"><b>${v}</b><span>${l}</span></div>`)}</div>`);
 }
 
@@ -122,3 +122,24 @@ async function reports(box) {
   });
 }
 
+
+async function spam(box) {
+  const d = await api('/api/admin/blocklist');
+  const row = (r, act) => html`<div class="row-item" style="flex-direction:column;gap:6px">
+    <strong>${r.name || ''} ${r.phone || r.value}</strong>
+    <span class="hint">${r.reporters ? `prijavilo ${r.reporters} prodavaca · ` : ''}${r.msgs ? `${r.msgs} upita · ` : ''}${r.ips ? `${r.ips} IP adresa · ` : ''}${r.reason || ''} ${ago(r.last || r.created_at)}</span>
+    ${act}</div>`;
+  render(box, html`
+    <form class="card stack" id="bf"><strong style="font-size:17px">Blokiraj broj ili IP</strong>
+      <div class="grid2"><select name="kind"><option value="phone">Telefon</option><option value="ip">IP adresa</option></select><input name="value" placeholder="06x… ili IP" required></div>
+      <button class="btn dark block">Blokiraj</button></form>
+    <h2 style="font-size:22px;margin:18px 0 8px">Prijavljeni kao spam (${d.reported.length})</h2>
+    ${d.reported.length ? html`<div class="list">${d.reported.map(r => row(r, html`<button class="btn danger sm" data-blk="${r.phone_norm}">Blokiraj</button>`))}</div>` : html`<div class="empty">Nema.</div>`}
+    <h2 style="font-size:22px;margin:18px 0 8px">Puno upita u 24 h</h2>
+    ${d.busiest.length ? html`<div class="list">${d.busiest.map(r => row(r, html`<button class="btn danger sm" data-blk="${r.phone_norm}">Blokiraj</button>`))}</div>` : html`<div class="empty">Nema sumnjivih.</div>`}
+    <h2 style="font-size:22px;margin:18px 0 8px">Blokirani (${d.blocked.length})</h2>
+    ${d.blocked.length ? html`<div class="list">${d.blocked.map(r => row({ ...r, name: r.kind === 'ip' ? 'IP' : 'Tel.' }, html`<button class="btn line sm" data-unb="${r.value}">Odblokiraj</button>`))}</div>` : html`<div class="empty">Niko nije blokiran.</div>`}`);
+  $('#bf', box).onsubmit = async e => { e.preventDefault(); try { await api('/api/admin/blocklist', { body: formData(e.target) }); toast('Blokirano'); spam(box); } catch (err) { fail(err); } };
+  $$('[data-blk]', box).forEach(b => { b.onclick = async () => { try { await api('/api/admin/blocklist', { body: { kind: 'phone', value: b.dataset.blk, reason: 'admin' } }); toast('Blokirano'); spam(box); } catch (e) { fail(e); } }; });
+  $$('[data-unb]', box).forEach(b => { b.onclick = async () => { try { await api('/api/admin/blocklist/' + encodeURIComponent(b.dataset.unb), { method: 'DELETE' }); toast('Odblokirano'); spam(box); } catch (e) { fail(e); } }; });
+}

@@ -4,6 +4,7 @@ import { app } from '../router.js';
 import { all, get, run } from '../db.js';
 import { bad, notFound, str, int, bool, genLabel, hashPassword } from '../lib.js';
 import { clearCatalogCache } from './catalog.js';
+import { normPhone } from './inquiries.js';
 
 const A = { auth: true, admin: true };
 
@@ -15,6 +16,7 @@ app.get('/api/admin/stats', () => ({
   requests: get("SELECT COUNT(*) c FROM requests WHERE status='open'").c,
   offers: get('SELECT COUNT(*) c FROM offers').c,
   inquiries: get("SELECT COUNT(*) c FROM inquiries WHERE created_at > datetime('now','-30 days')").c,
+  spam_blocked: get('SELECT COUNT(*) c FROM blocklist').c,
   new_users_7d: get("SELECT COUNT(*) c FROM users WHERE created_at > datetime('now','-7 days')").c,
   reports: get("SELECT COUNT(*) c FROM reports WHERE status='new'").c,
   suggestions: get("SELECT COUNT(*) c FROM model_suggestions WHERE status='new'").c,
@@ -97,5 +99,32 @@ app.put('/api/admin/models/:id', ({ params, body }) => {
     str(body.name, 80) || m.name, str(body.generation_name, 30), from ? `${from}-01` : m.date_from, to ? `${to}-12` : null,
     body.active === undefined ? m.active : bool(body.active), m.id);
   clearCatalogCache();
+  return { ok: true };
+}, A);
+
+// ---------- spam: blokirani brojevi i IP adrese ----------
+app.get('/api/admin/blocklist', () => ({
+  blocked: all('SELECT * FROM blocklist ORDER BY created_at DESC LIMIT 500'),
+  // brojevi koje je neko označio kao spam, a još nisu blokirani
+  reported: all(`SELECT phone_norm, MAX(phone) phone, MAX(name) name, COUNT(DISTINCT to_user_id) reporters, COUNT(*) msgs, MAX(created_at) last
+    FROM inquiries WHERE spam=1 AND phone_norm NOT IN (SELECT value FROM blocklist WHERE kind='phone')
+    GROUP BY phone_norm ORDER BY last DESC LIMIT 100`),
+  // najaktivniji pošiljaoci u zadnja 24 sata
+  busiest: all(`SELECT phone_norm, MAX(phone) phone, MAX(name) name, COUNT(*) msgs, COUNT(DISTINCT ip) ips FROM inquiries
+    WHERE created_at > datetime('now','-1 day') GROUP BY phone_norm HAVING msgs >= 5 ORDER BY msgs DESC LIMIT 30`),
+}), A);
+
+app.post('/api/admin/blocklist', ({ body }) => {
+  const kind = body.kind === 'ip' ? 'ip' : 'phone';
+  let value = str(body.value, 60);
+  if (!value) throw bad('Upiši broj ili IP');
+  if (kind === 'phone') value = normPhone(value);
+  run('INSERT OR IGNORE INTO blocklist (value, kind, reason) VALUES (?,?,?)', value, kind, str(body.reason, 200) || 'ručno');
+  run("UPDATE inquiries SET spam=1 WHERE phone_norm=? AND created_at > datetime('now','-7 days')", value);
+  return { ok: true };
+}, A);
+
+app.del('/api/admin/blocklist/:value', ({ params }) => {
+  run('DELETE FROM blocklist WHERE value=?', params.value);
   return { ok: true };
 }, A);

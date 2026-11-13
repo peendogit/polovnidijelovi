@@ -9,6 +9,7 @@ import { run, tx, UPLOAD_DIR } from './db.js';
 import { HttpError, parseCookies, userFromToken, COLOR_MERGE } from './lib.js';
 import { routes } from './router.js';
 import { renderIndex, sitemap } from './seo.js';
+import { mailEnabled } from './mail.js';
 import './routes/auth.js';
 import './routes/catalog.js';
 import './routes/parts.js';
@@ -98,6 +99,10 @@ const server = http.createServer(async (req, res) => {
       const user = userFromToken(cookies.pd_s);
       if (m.route.auth && !user) throw new HttpError(401, 'Prijavi se');
       if (m.route.admin && !user?.is_admin) throw new HttpError(403, 'Samo za administratora');
+      if (m.route.verified && !user.email_verified && mailEnabled()) {
+        const e = new HttpError(403, 'Prvo potvrdi email — link smo ti poslali na ' + user.email + '. Ne vidiš ga? U profilu klikni „Pošalji ponovo“.');
+        e.code = 'verify'; throw e;
+      }
       let body = {};
       if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
         const raw = await readBody(req, m.route.limit || 1e6);
@@ -136,7 +141,7 @@ const server = http.createServer(async (req, res) => {
   } catch (e) {
     const status = e.status || 500;
     if (status === 500) console.error(new Date().toISOString(), req.method, p, e);
-    if (!res.headersSent) send(req, res, status, { error: status === 500 ? 'Greška na serveru' : e.message });
+    if (!res.headersSent) send(req, res, status, { error: status === 500 ? 'Greška na serveru' : e.message, ...(e.code ? { code: e.code } : {}) });
   }
 });
 

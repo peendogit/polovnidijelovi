@@ -27,4 +27,4 @@ app.post('/api/upload', ({ user, body }) => {
   fs.writeFileSync(path.join(UPLOAD_DIR, name), full.buf);
   if (thumb) fs.writeFileSync(path.join(UPLOAD_DIR, `${id}_t.${thumb.ext}`), thumb.buf);
   return { url: `/uploads/${name}` };
-}, { auth: true, limit: 7e6 });
+}, { auth: true, verified: true, limit: 7e6 });

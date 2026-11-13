@@ -76,7 +76,7 @@ app.post('/api/vehicles', ({ user, body }) => {
   const keys = Object.keys(d);
   const r = run(`INSERT INTO vehicles (user_id, ${keys.join(',')}) VALUES (?, ${keys.map(() => '?').join(',')})`, user.id, ...Object.values(d));
   return { id: Number(r.lastInsertRowid) };
-}, { auth: true });
+}, { auth: true, verified: true });
 
 app.put('/api/vehicles/:id', ({ user, body, params }) => {
   const v = own('vehicles', params.id, user);

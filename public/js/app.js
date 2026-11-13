@@ -6,7 +6,7 @@ import { partsPage, partPage } from './pages/parts.js';
 import { vehiclesPage, vehiclePage } from './pages/vehicles.js';
 import { requestsPage, newRequestPage, requestPage } from './pages/requests.js';
 import { postChoosePage, partFormPage, vehicleFormPage } from './pages/post.js';
-import { loginPage, registerPage, profilePage, sellersPage, sellerPage } from './pages/account.js';
+import { loginPage, registerPage, profilePage, sellersPage, sellerPage, verifyPage, forgotPage, resetPage, sendVerifyAgain } from './pages/account.js';
 import { adminPage } from './pages/admin.js';
 
 route('/', homePage);
@@ -33,6 +33,9 @@ route('/prodavac/:id', sellerPage);
 route('/admin', adminPage);
 route('/admin/:tab', adminPage);
 route('/uslovi', termsPage);
+route('/potvrdi/:token', verifyPage);
+route('/zaboravljena-lozinka', forgotPage);
+route('/nova-lozinka/:token', resetPage);
 
 function termsPage({ el }) {
   setTitle('Uslovi korištenja');
@@ -57,7 +60,19 @@ function navItems() {
     [u ? '/profil' : '/prijava', 'user', u ? 'Profil' : 'Prijava', prof],
   ];
 }
+// traka "potvrdi email" ispod zaglavlja
+function drawBanner() {
+  const u = state.user;
+  let b = $('#vbanner');
+  const need = u && u.mail_enabled && !u.email_verified && !location.pathname.startsWith('/potvrdi');
+  if (!need) { b?.remove(); return; }
+  if (!b) { b = document.createElement('div'); b.id = 'vbanner'; b.className = 'vbanner'; $('.top').after(b); }
+  render(b, html`<span>Potvrdi email (<strong>${u.email}</strong>) da bi mogao objavljivati.</span><button class="link" id="vbb">Pošalji ponovo</button>`);
+  $('#vbb', b).onclick = sendVerifyAgain;
+}
+
 function drawNav() {
+  drawBanner();
   const p = location.pathname;
   const on = href => (href === '/dijelovi' ? p.startsWith('/dijelovi') || p.startsWith('/dio') || p.startsWith('/polovni-dijelovi')
     : href === '/vozila' ? p.startsWith('/vozil') : p.startsWith(href));

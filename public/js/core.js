@@ -29,6 +29,7 @@ export async function api(path, opts = {}) {
   if (!res.ok) {
     const e = new Error(data?.error || 'Greška (' + res.status + ')');
     e.status = res.status;
+    e.code = data?.code;
     throw e;
   }
   return data;

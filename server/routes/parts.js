@@ -79,7 +79,7 @@ app.post('/api/parts', ({ user, body }) => {
   const keys = Object.keys(d);
   const r = run(`INSERT INTO parts (user_id, ${keys.join(',')}) VALUES (?, ${keys.map(() => '?').join(',')})`, user.id, ...Object.values(d));
   return { id: Number(r.lastInsertRowid) };
-}, { auth: true });
+}, { auth: true, verified: true });
 
 function own(table, id, user) {
   const row = get(`SELECT * FROM ${table} WHERE id=?`, int(id));

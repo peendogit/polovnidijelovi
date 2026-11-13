@@ -34,7 +34,7 @@ pm2 start ecosystem.config.cjs && pm2 save
 bash tools/https-setup.sh polovnidijelovi.com
 
 # 5) Automatsko ažuriranje sa GitHuba + dnevna kopija baze
-(crontab -l 2>/dev/null; echo "* * * * * /var/www/polovnidijelovi/deploy.sh >> /var/log/polovnidijelovi-deploy.log 2>&1"; echo "15 3 * * * /var/www/polovnidijelovi/tools/backup.sh") | crontab -
+(crontab -l 2>/dev/null | grep -v polovnidijelovi; echo "* * * * * /var/www/polovnidijelovi/deploy.sh >> /var/log/polovnidijelovi-deploy.log 2>&1"; echo "15 3 * * * /var/www/polovnidijelovi/tools/backup.sh >> /var/log/polovnidijelovi-backup.log 2>&1") | crontab -
 ```
 
 **Prvi korisnik koji se registruje automatski postaje administrator.** Zato se registruj odmah nakon pokretanja. Drugog admina dodaješ sa:
@@ -46,6 +46,45 @@ npm run admin -- email@primjer.ba
 Ako je port 3030 već zauzet, promijeni `PORT=` u `.env`, pa pokreni `pm2 restart polovnidijelovi` i ponovo `bash tools/https-setup.sh polovnidijelovi.com`.
 
 Baza je u `data/polovnidijelovi.db`, slike su u `data/uploads/`, a kopije baze u `data/backup/` (čuvaju se 14 dana).
+
+## Email (potvrda emaila, zaboravljena lozinka)
+
+1. Na Gmail nalogu uključi **2-Step Verification**, pa otvori https://myaccount.google.com/apppasswords i napravi lozinku za aplikaciju (16 slova).
+2. U `.env` upiši:
+   ```
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=465
+   SMTP_USER=tvoj@gmail.com
+   SMTP_PASS=lozinka-za-aplikaciju-bez-razmaka
+   MAIL_FROM=polovnidijelovi.com <tvoj@gmail.com>
+   SITE_URL=https://polovnidijelovi.com
+   ```
+3. `pm2 restart polovnidijelovi`
+
+Dok email nije podešen, sajt radi kao prije (bez potvrde emaila). Kad se podesi, novi korisnici moraju potvrditi email prije objave oglasa, vozila, zahtjeva i ponuda. Postojeći korisnici se računaju kao potvrđeni.
+
+## Spam upiti
+
+- skriveno polje koje popunjavaju samo roboti, i odbijanje upita poslanih za manje od 3 sekunde
+- gost: najviše 10 upita dnevno sa jednog broja, bez linkova u poruci, ista poruka se ne može poslati dva puta
+- prodavac u **Profil → Upiti** klikne **Spam**: upit nestaje, a kad 2 različita prodavca prijave isti broj, broj se blokira na cijelom sajtu (admin blokira odmah)
+- **Administracija → Spam**: prijavljeni brojevi, brojevi sa puno upita, ručno blokiranje broja ili IP adrese
+
+## Kopija van servera (Backblaze B2)
+
+Svaku noć u 3:15 `tools/backup.sh` napravi kopiju baze i pošalje nju i nove slike na Backblaze B2 (prvih 10 GB besplatno).
+
+1. Napravi nalog na https://www.backblaze.com/sign-up/cloud-storage
+2. **Buckets → Create a Bucket**: naziv npr. `polovnidijelovi-kopija`, **Private**
+3. **Application Keys → Add a New Application Key**: pristup samo tom bucketu, Read and Write. Zapiši `keyID` i `applicationKey` (applicationKey se prikaže samo jednom).
+4. Na serveru: `bash tools/offsite-setup.sh` i upiši ta tri podatka.
+
+Vraćanje:
+```bash
+bash tools/restore.sh              # spisak kopija
+bash tools/restore.sh 2026-11-20   # vrati bazu od tog dana
+bash tools/restore.sh slike        # vrati sve slike sa Backblaze
+```
 
 ## API za otpade (automatsko slanje dijelova)
 

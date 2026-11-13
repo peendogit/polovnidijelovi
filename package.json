@@ -12,6 +12,7 @@
     "admin": "node --no-warnings tools/make-admin.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.10.0"
+    "better-sqlite3": "^11.10.0",
+    "nodemailer": "^10.5.0"
   }
 }

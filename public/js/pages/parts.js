@@ -1,5 +1,5 @@
 import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy, partUrl, canonical } from '../core.js';
-import { icon, vehiclePicker, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox } from '../components.js';
+import { icon, vehiclePicker, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, antiSpam } from '../components.js';
 
 // Lista dijelova; /dijelovi?make=&model=&gen=&q=&city=&sort=
 export async function partsPage({ el, query, params }) {
@@ -135,7 +135,7 @@ export async function share(text) {
 // Upit prodavcu (dio / vozilo / prodavac)
 export function inquiryModal(target, defText = '') {
   const u = state.user;
-  modal('Pošalji upit', html`<form class="stack" id="iqF">
+  modal('Pošalji upit', html`<form class="stack" id="iqF">${antiSpam()}
     <label class="f req"><span>Poruka</span><textarea name="message" required>${defText}</textarea></label>
     ${u ? html`<p class="hint" style="margin:0">Prodavac će vidjeti tvoje ime i broj: <strong>${u.name}, ${u.phone}</strong></p>` : html`
       <div class="grid2"><label class="f req"><span>Ime</span><input name="name" required autocomplete="name"></label>

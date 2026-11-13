@@ -61,7 +61,7 @@ app.post('/api/requests', ({ user, body }) => {
   user.id, m ? m.make_id : str(body.make_id, 60), m?.id, str(body.model_text, 80), int(body.year), str(body.engine, 40), part,
   desc, str(body.city, 60) || user.city, imgList(body.images), search);
   return { id: Number(r.lastInsertRowid) };
-}, { auth: true });
+}, { auth: true, verified: true });
 
 app.post('/api/requests/:id/close', ({ user, params }) => {
   const r = get('SELECT * FROM requests WHERE id=?', int(params.id));
@@ -92,7 +92,7 @@ app.post('/api/requests/:id/offer', ({ user, params, body }) => {
     ON CONFLICT(request_id, user_id) DO UPDATE SET price=excluded.price, message=excluded.message, part_id=excluded.part_id, seen=0, created_at=datetime('now')`,
   r.id, user.id, price, message, part_id);
   return { ok: true };
-}, { auth: true });
+}, { auth: true, verified: true });
 
 app.del('/api/requests/:id/offer', ({ user, params }) => {
   run('DELETE FROM offers WHERE request_id=? AND user_id=?', int(params.id), user.id);

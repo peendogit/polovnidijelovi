@@ -295,3 +295,10 @@ input.caps::placeholder{text-transform:none}
 /* lokacija oglasa (iz profila) */
 .loc-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:15px;padding:10px 12px;background:var(--bg);border-radius:var(--r-s)}
 .loc-line a{font-size:13px;color:var(--muted);margin-left:auto}
+
+/* zaštita od robota: polje se ne vidi */
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+/* traka "potvrdi email" */
+.vbanner{background:#FFF4D6;color:#5C4300;font-size:14px;padding:8px 16px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid #F1D58A}
+.vbanner .link{color:#5C4300;min-height:36px}
+details summary{cursor:pointer}

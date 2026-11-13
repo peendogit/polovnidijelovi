@@ -1,6 +1,6 @@
 import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, getMeta } from '../core.js';
 import { vehicleUrl, canonical } from '../core.js';
-import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES } from '../components.js';
+import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES, antiSpam } from '../components.js';
 import { inquiryModal, share, reportModal } from './parts.js';
 
 // Vozila za dijelove — filter i lista (nacrt 5)
@@ -109,7 +109,7 @@ export async function vehiclesPage({ el, query: q }) {
 
 function askAllModal(target, label) {
   const u = state.user;
-  modal(`Pitaj sve otpade — ${label}`, html`<form class="stack" id="aaF">
+  modal(`Pitaj sve otpade — ${label}`, html`<form class="stack" id="aaF">${antiSpam()}
     <label class="f req"><span>Koji dio tražiš?</span><textarea name="message" required placeholder="npr. far lijevi, xenon. Godište 2010, 1.6 TDI."></textarea></label>
     ${u ? html`<p class="hint" style="margin:0">Otpadi će te zvati na: <strong>${u.phone}</strong></p>` : html`
     <div class="grid2"><label class="f req"><span>Ime</span><input name="name" required></label><label class="f req"><span>Telefon</span><input name="phone" type="tel" required placeholder="06x…"></label></div>`}

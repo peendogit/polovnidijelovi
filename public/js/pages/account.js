@@ -15,7 +15,7 @@ export async function loginPage({ el, query }) {
       <button class="btn accent big block">Prijavi se</button>
     </div>
     <p style="text-align:center;margin:4px 0">Nemaš nalog? <a href="/registracija${qs({ next: query.next })}">Registruj se besplatno</a></p>
-    <p class="hint" style="text-align:center;margin:0">Zaboravio si lozinku? Javi se administratoru sajta.</p>
+    <p style="text-align:center;margin:0"><a href="/zaboravljena-lozinka">Zaboravio si lozinku?</a></p>
   </form>`);
   $('#lf', el).onsubmit = async e => {
     e.preventDefault();
@@ -116,8 +116,17 @@ async function tabInquiries(box) {
     ${i.part_id ? html`<a class="hint" href="${partUrl({ id: i.part_id, title: i.part_title })}">Dio: ${i.part_title || 'oglas'}</a>` : i.vehicle_id ? html`<a class="hint" href="/vozilo/${i.vehicle_id}">Vozilo: ${i.vehicle || 'pogledaj'}</a>` : ''}
     <div class="desc">${i.message}</div>
     <div class="btns3" style="width:100%">${contactButtons({ phone: i.phone, viber: 1, whatsapp: 1 }, '')}</div>
-    <button class="link" data-del="${i.id}" style="align-self:flex-end;font-size:13px;color:var(--muted)">Obriši</button>
+    <div style="display:flex;gap:16px;align-self:flex-end">
+      <button class="link" data-spam="${i.id}" style="font-size:13px;color:var(--bad)">Spam</button>
+      <button class="link" data-del="${i.id}" style="font-size:13px;color:var(--muted)">Obriši</button>
+    </div>
   </div>`)}</div>` : html`<div class="empty"><strong>Nema upita</strong>Kad te kupac pita za dio ili vozilo, pojaviće se ovdje.</div>`);
+  $$('[data-spam]', box).forEach(b => {
+    b.onclick = async () => {
+      if (!await confirmBox('Označiti kao spam? Upit nestaje, a ako i drugi otpadi prijave ovaj broj, on se blokira na cijelom sajtu.', 'Spam')) return;
+      try { const r = await api(`/api/my/inquiries/${b.dataset.spam}/spam`, { body: {} }); toast(r.blocked ? 'Broj je blokiran' : 'Označeno kao spam'); tabInquiries(box); } catch (e) { fail(e); }
+    };
+  });
   $$('[data-del]', box).forEach(b => {
     b.onclick = async () => { try { await api('/api/my/inquiries/' + b.dataset.del, { method: 'DELETE' }); b.closest('.row-item').remove(); } catch (e) { fail(e); } };
   });
@@ -162,7 +171,17 @@ async function tabSettings(box) {
     ${u.type === 'otpad' ? html`<label class="check"><input type="checkbox" name="ships" ${u.ships ? 'checked' : ''}> Šaljemo dijelove brzom poštom</label>
       <label class="f"><span>O otpadu (radno vrijeme, garancija…)</span><textarea name="about">${u.about || ''}</textarea></label>` : html`<input type="hidden" name="about" value="${u.about || ''}">`}
     <button class="btn accent block">Sačuvaj</button>
-    <p class="hint" style="margin:0">Email: ${u.email}</p>
+  </form>
+  <form class="card stack" id="emf" style="margin-top:12px">
+    <strong style="font-size:17px">Email</strong>
+    <p style="margin:0">${u.email} ${u.mail_enabled ? (u.email_verified ? html`<span class="badge ok">potvrđen</span>` : html`<span class="badge bad">nije potvrđen</span>`) : ''}</p>
+    ${u.mail_enabled && !u.email_verified ? html`<button type="button" class="btn accent block" id="vres">Pošalji ponovo link za potvrdu</button>` : ''}
+    <details><summary class="link" style="display:inline-flex;align-items:center">Promijeni email</summary>
+      <div class="stack" style="margin-top:10px">
+        <label class="f"><span>Novi email</span><input type="email" name="email" autocomplete="email"></label>
+        <label class="f"><span>Tvoja lozinka</span><input type="password" name="password" autocomplete="current-password"></label>
+        <button class="btn line block">Sačuvaj novi email</button>
+      </div></details>
   </form>
   <form class="card stack" id="pwf" style="margin-top:12px">
     <strong style="font-size:17px">Promjena lozinke</strong>
@@ -196,6 +215,11 @@ async function tabSettings(box) {
     const b = e.submitter; busy(b, true, 'Snimam…');
     try { setMe(await api('/api/me', { method: 'PUT', body: formData(f) })); toast('Sačuvano'); } catch (err) { fail(err); }
     busy(b, false);
+  };
+  $('#vres', box)?.addEventListener('click', sendVerifyAgain);
+  $('#emf', box).onsubmit = async e => {
+    e.preventDefault();
+    try { setMe(await api('/api/me/email', { body: formData(e.target) })); toast(state.user.email_verified ? 'Email promijenjen' : 'Email promijenjen — provjeri sanduče i potvrdi ga'); tabSettings(box); } catch (err) { fail(err); }
   };
   $('#pwf', box).onsubmit = async e => {
     e.preventDefault();
@@ -256,3 +280,54 @@ export async function sellerPage({ el, params, query }) {
   });
 }
 
+
+export async function sendVerifyAgain() {
+  try {
+    const r = await api('/api/auth/verify-send', { body: {} });
+    toast(r.already ? 'Email je već potvrđen' : `Link poslan na ${r.email}. Provjeri i Spam/Promotions.`);
+  } catch (e) { fail(e); }
+}
+
+// ---------- potvrda emaila / zaboravljena lozinka ----------
+export async function verifyPage({ el, params }) {
+  setTitle('Potvrda emaila');
+  render(el, html`<section class="page-head"><div class="row"><h1 style="padding-left:12px">Potvrda emaila</h1></div></section><div class="wrap" style="padding-top:16px"><div class="card" id="vb">Provjeravam…</div></div>`);
+  try {
+    setMe(await api('/api/auth/verify', { body: { token: params.token } }));
+    render($('#vb', el), html`<div class="stack"><strong style="font-size:18px">✓ Email je potvrđen</strong><span>Sada možeš objavljivati dijelove, vozila i zahtjeve.</span><a class="btn accent block" href="/objavi">Objavi oglas</a></div>`);
+  } catch (e) {
+    render($('#vb', el), html`<div class="stack"><strong style="font-size:18px">Link ne važi</strong><span>${e.message}</span>${state.user ? html`<button class="btn dark block" id="va">Pošalji novi link</button>` : html`<a class="btn dark block" href="/prijava">Prijavi se</a>`}</div>`);
+    $('#va', el)?.addEventListener('click', sendVerifyAgain);
+  }
+}
+
+export async function forgotPage({ el }) {
+  setTitle('Zaboravljena lozinka');
+  render(el, html`<section class="page-head"><div class="row"><h1 style="padding-left:12px">Zaboravljena lozinka</h1></div><p class="sub">Poslaćemo ti link za novu lozinku.</p></section>
+  <form class="wrap stack" id="ff" style="padding-top:16px;max-width:520px"><div class="card stack">
+    <label class="f"><span>Email sa kojim si se registrovao</span><input name="email" type="email" required autocomplete="email"></label>
+    <button class="btn accent big block">Pošalji link</button></div>
+    <p style="text-align:center"><a href="/prijava">Nazad na prijavu</a></p></form>`);
+  $('#ff', el).onsubmit = async e => {
+    e.preventDefault();
+    const b = e.submitter; busy(b, true, 'Šaljem…');
+    try {
+      await api('/api/auth/forgot', { body: formData(e.target) });
+      render($('#ff', el), html`<div class="card stack"><strong style="font-size:18px">Provjeri email</strong><span>Ako postoji nalog sa tim emailom, poslali smo link za novu lozinku. Link važi 1 sat. Pogledaj i Spam/Promotions.</span></div>`);
+    } catch (err) { fail(err); busy(b, false); }
+  };
+}
+
+export async function resetPage({ el, params }) {
+  setTitle('Nova lozinka');
+  render(el, html`<section class="page-head"><div class="row"><h1 style="padding-left:12px">Nova lozinka</h1></div></section>
+  <form class="wrap stack" id="rf" style="padding-top:16px;max-width:520px"><div class="card stack">
+    <label class="f"><span>Nova lozinka (najmanje 6 znakova)</span><input name="password" type="password" minlength="6" required autocomplete="new-password"></label>
+    <button class="btn accent big block">Sačuvaj lozinku</button></div></form>`);
+  $('#rf', el).onsubmit = async e => {
+    e.preventDefault();
+    const b = e.submitter; busy(b, true, 'Snimam…');
+    try { setMe(await api('/api/auth/reset', { body: { token: params.token, password: e.target.password.value } })); toast('Lozinka promijenjena — prijavljen si'); go('/profil', true); }
+    catch (err) { fail(err); busy(b, false); }
+  };
+}

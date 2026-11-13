@@ -120,6 +120,9 @@ export function sellerBlock(s) {
   </a>`;
 }
 
+// skriveno polje protiv robota + vrijeme otvaranja (server odbija prebrzo poslane upite)
+export const antiSpam = () => html`<div class="hp" aria-hidden="true"><label>Web stranica<input name="website" tabindex="-1" autocomplete="off"></label></div><input type="hidden" name="t" value="${Date.now()}">`;
+
 // ---------- modal ----------
 export function modal(title, body, onMount) {
   const m = document.createElement('div');
@@ -133,7 +136,7 @@ export function modal(title, body, onMount) {
   document.addEventListener('keydown', onKey);
   document.body.appendChild(m);
   onMount?.(m, close);
-  m.querySelector('input,select,textarea')?.focus();
+  m.querySelector('.box :is(input, select, textarea):not([tabindex="-1"]):not([type=hidden])')?.focus();
   return close;
 }
 export function confirmBox(text, yes = 'Da') {
