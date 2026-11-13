@@ -2,6 +2,7 @@ import { html, raw, render, $, api, go, qs, setTitle, formData, fail, toast, sta
 import { typeSuggest, icon, vehiclePicker, imageInput, suggestModel, citySelect, bindYear, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES } from '../components.js';
 
 // "1.6 TDI" -> "1.6" (za padajući meni)
+const gbKind = g => /auto|dsg|tronic|cvt/i.test(g || '') ? 'automatik' : /manu/i.test(g || '') ? 'manuelni' : '';
 const engNum = e => (String(e || '').match(/\d[.,]\d/) || [''])[0].replace(',', '.');
 
 const needLogin = () => go('/prijava?next=' + encodeURIComponent(location.pathname + location.search), true);
@@ -29,7 +30,7 @@ export async function partFormPage({ el, params, query }) {
   const myVeh = state.user.type === 'otpad' ? (await api('/api/my/vehicles?status=active')).items : [];
   const p = edit || {};
   const preV = query.vozilo ? myVeh.find(v => String(v.id) === String(query.vozilo)) : null;
-  const src = edit || preV || (query.make ? { make_id: query.make, model_name: query.model, model_id: query.gen, year: query.year, engine: query.engine, fuel: query.fuel } : {});
+  const src = edit || preV || (query.make ? { make_id: query.make, model_name: query.model, model_id: query.gen, year: query.year, engine: query.engine, fuel: query.fuel, power_kw: query.kw, engine_code: query.ecode, gearbox: query.gearbox, gears: query.gears, gearbox_code: query.gcode } : {});
   setTitle(edit ? 'Uredi dio' : 'Objavi dio');
   render(el, html`
   <section class="page-head"><div class="row"><a href="${edit ? '/dio/' + p.id : '/objavi'}" class="icon-btn" aria-label="Nazad">${icon('back', 22, '#fff')}</a><h1>${edit ? 'Uredi dio' : 'Objavi dio'}</h1></div></section>
@@ -42,10 +43,19 @@ export async function partFormPage({ el, params, query }) {
       <div id="vp" class="stack" style="gap:10px"></div>
       <button type="button" class="link" id="nomodel" style="align-self:flex-start">Nema mog modela?</button>
       <label class="f" id="mtxt" ${p.model_text ? '' : raw('hidden')}><span>Upiši marku i model</span><input name="model_text" value="${p.model_text || ''}" placeholder="npr. Volkswagen Golf 8 facelift"></label>
-      <div class="grid3">
+      <div class="grid2">
         <label class="f"><span>Godište</span><select name="year"></select></label>
-        <label class="f"><span>Motor</span>${engineSelect('engine', engNum(src.engine) || src.engine)}</label>
         <label class="f"><span>Gorivo</span><select name="fuel"><option value="">—</option>${meta.fuels.map(f => html`<option ${src.fuel === f ? raw('selected') : ''}>${f}</option>`)}</select></label>
+      </div>
+      <div class="grid3">
+        <label class="f"><span>Motor</span>${engineSelect('engine', engNum(src.engine) || src.engine)}</label>
+        <label class="f"><span>Snaga kW</span><input name="power_kw" inputmode="numeric" value="${src.power_kw || ''}" placeholder="77"></label>
+        <label class="f"><span>Kod motora</span><input name="engine_code" class="caps" value="${src.engine_code || ''}" placeholder="BKC" autocapitalize="characters" autocomplete="off"></label>
+      </div>
+      <div class="grid3">
+        <label class="f"><span>Mjenjač</span>${optSelect('gearbox', GEARBOXES, gbKind(src.gearbox))}</label>
+        <label class="f"><span>Broj brzina</span>${optSelect('gears', ['4', '5', '6', '7', '8', '9'], src.gears ? String(src.gears) : '')}</label>
+        <label class="f"><span>Kod mjenjača</span><input name="gearbox_code" class="caps" value="${src.gearbox_code || ''}" placeholder="JCR" autocapitalize="characters" autocomplete="off"></label>
       </div>
     </div>
     <div class="card stack">
@@ -84,6 +94,9 @@ export async function partFormPage({ el, params, query }) {
     f.year.value = v.year || ''; f.year.dispatchEvent(new Event('change'));
     f.engine.value = engNum(v.engine); f.fuel.value = v.fuel || '';
     f.color.value = v.color || ''; f.color_code.value = v.color_code || '';
+    f.power_kw.value = v.power_kw || ''; f.engine_code.value = v.engine_code || '';
+    f.gearbox.value = gbKind(v.gearbox);
+    f.gears.value = v.gears ? String(v.gears) : ''; f.gearbox_code.value = v.gearbox_code || '';
     if (v.model_text) { $('#mtxt', el).hidden = false; f.model_text.value = v.model_text; }
   });
 
@@ -95,14 +108,14 @@ export async function partFormPage({ el, params, query }) {
     if (!v.gen && !f.model_text.trim()) return toast(v.model ? 'Izaberi generaciju (npr. facelift ili ne)' : 'Izaberi marku, model i generaciju', true);
     if (imgs.busy()) return toast('Sačekaj da se slike učitaju', true);
     const b = e.submitter; busy(b, true, 'Snimam…');
-    if (f.color_code) f.color_code = f.color_code.trim().toUpperCase();
+    for (const k of ['engine_code', 'gearbox_code', 'color_code']) if (f[k]) f[k] = f[k].trim().toUpperCase();
     const body = { ...f, make_id: v.make, model_id: v.gen || null, images: imgs.get(), condition: f.damaged ? 'oštećeno' : 'polovno', negotiable: 0 };
     delete body.damaged;
     try {
       const r = edit ? await api('/api/parts/' + p.id, { method: 'PUT', body }) : await api('/api/parts', { body });
       toast(edit ? 'Sačuvano' : 'Dio objavljen');
       if (b?.name === 'next') {
-        go('/objavi/dio' + qs({ vozilo: f.vehicle_id, make: v.make, model: v.model, gen: v.gen, year: f.year, engine: f.engine, fuel: f.fuel }), true);
+        go('/objavi/dio' + qs({ vozilo: f.vehicle_id, make: v.make, model: v.model, gen: v.gen, year: f.year, engine: f.engine, fuel: f.fuel, kw: f.power_kw, ecode: f.engine_code, gearbox: f.gearbox, gears: f.gears, gcode: f.gearbox_code }), true);
       } else go(partUrl({ id: r.id, title: f.title, model_name: v.model, model_text: f.model_text, part_no: f.part_no }), true);
     } catch (err) { fail(err); busy(b, false); }
   };
@@ -130,8 +143,8 @@ export async function vehicleFormPage({ el, params }) {
       </div>
       <div class="grid3">
         <label class="f"><span>Motor</span>${engineSelect('engine', engNum(v.engine) || v.engine)}</label>
+        <label class="f"><span>Snaga kW</span><input name="power_kw" inputmode="numeric" value="${v.power_kw || ''}" placeholder="77"></label>
         <label class="f"><span>Kod motora</span><input name="engine_code" class="caps" value="${v.engine_code || ''}" placeholder="BKC" autocapitalize="characters" autocomplete="off"></label>
-        <label class="f"><span>Snaga kW</span><input name="power_kw" inputmode="numeric" value="${v.power_kw || ''}"></label>
       </div>
       <div class="grid3">
         <label class="f"><span>Mjenjač</span>${optSelect('gearbox', GEARBOXES, v.gearbox)}</label>

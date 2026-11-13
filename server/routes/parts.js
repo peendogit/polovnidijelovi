@@ -1,7 +1,7 @@
 // Oglasi za dijelove
 import { app } from '../router.js';
 import { all, get, run } from '../db.js';
-import { COLORS, upper, bad, notFound, forbidden, str, int, num, bool, imgList, modelById, vehicleName, normalize, searchWords, rateLimit } from '../lib.js';
+import { COLORS, upper, gearsInt, gearboxKind, bad, notFound, forbidden, str, int, num, bool, imgList, modelById, vehicleName, normalize, searchWords, rateLimit } from '../lib.js';
 import { findType, typeById } from '../types.js';
 import { vehicleFilter, MODEL_JOIN, MODEL_COLS, sellerOf, fmtVehicleRow, pageArgs, countAndList } from './common.js';
 
@@ -54,6 +54,8 @@ app.get('/api/parts/:id', ({ params, user }) => {
   return out;
 });
 
+const kw = v => { const n = int(v); return n > 0 && n < 2000 ? n : null; };
+
 function readPart(body, owner) {
   const user = owner;
   const title = str(body.title, 120);
@@ -71,13 +73,15 @@ function readPart(body, owner) {
   const type = typeById(int(body.type_id)) || findType(title);
   const d = {
     title, type_id: type?.id || null, make_id, model_id: m ? m.id : null, model_text: str(body.model_text, 80), year: int(body.year),
-    fuel: str(body.fuel, 30), engine: str(body.engine, 40), part_no: str(body.part_no, 60), side: str(body.side, 30), color: COLORS.includes(body.color) ? body.color : null, color_code: upper(body.color_code, 20),
+    fuel: str(body.fuel, 30), engine: str(body.engine, 40), engine_code: upper(body.engine_code, 20), power_kw: kw(body.power_kw),
+    gearbox: gearboxKind(body.gearbox), gearbox_code: upper(body.gearbox_code, 20), gears: gearsInt(body.gears),
+    part_no: str(body.part_no, 60), side: str(body.side, 30), color: COLORS.includes(body.color) ? body.color : null, color_code: upper(body.color_code, 20),
     condition: ['polovno', 'novo', 'oštećeno'].includes(body.condition) ? body.condition : 'polovno',
     price, negotiable: bool(body.negotiable), description: str(body.description, 4000), city: owner.city || null,
     images: imgList(body.images), vehicle_id,
   };
   const mk = make_id ? get('SELECT name FROM car_make WHERE id=?', make_id) : null;
-  d.search = normalize([title, type?.title, d.part_no, d.color_code, d.engine, d.description, mk?.name, m ? vehicleName({ make_name: '', model_name: m.name, generation_name: m.generation_name }) : d.model_text].join(' '));
+  d.search = normalize([title, type?.title, d.part_no, d.color_code, d.engine, d.engine_code, d.gearbox_code, d.description, mk?.name, m ? vehicleName({ make_name: '', model_name: m.name, generation_name: m.generation_name }) : d.model_text].join(' '));
   return d;
 }
 

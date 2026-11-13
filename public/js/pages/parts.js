@@ -81,7 +81,8 @@ export async function partPage({ el, params }) {
         <div class="veh">${p.generation ? html`<a href="/dijelovi${qs({ make: p.make_id, gen: p.model_id })}">${p.make_name} ${p.generation}</a>` : p.vehicle}</div>
         <div class="price">${km(p.price)} ${p.negotiable ? html`<small>· po dogovoru</small>` : ''}</div>
         <dl class="facts">
-          ${[['Stanje', p.condition], ['Godište', p.year], ['Motor', p.engine], ['Gorivo', p.fuel], ['Strana', p.side], ['Boja', p.color], ['Kod boje', p.color_code], ['Kataloški broj', p.part_no], ['Lokacija', p.city], ['Objavljeno', ago(p.created_at)]]
+          ${[['Stanje', p.condition], ['Godište', p.year], ['Motor', p.engine], ['Snaga', p.power_kw ? p.power_kw + ' kW' : null], ['Kod motora', p.engine_code], ['Gorivo', p.fuel],
+            ['Mjenjač', p.gearbox], ['Broj brzina', p.gears], ['Kod mjenjača', p.gearbox_code], ['Strana', p.side], ['Boja', p.color], ['Kod boje', p.color_code], ['Kataloški broj', p.part_no], ['Lokacija', p.city], ['Objavljeno', ago(p.created_at)]]
             .filter(x => x[1]).map(([a, b]) => html`<div><dt>${a}</dt><dd>${b}</dd></div>`)}
         </dl>
         ${p.description ? html`<div class="desc">${p.description}</div>` : ''}

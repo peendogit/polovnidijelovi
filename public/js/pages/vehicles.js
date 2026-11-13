@@ -140,7 +140,7 @@ export async function vehiclePage({ el, params }) {
         <h1>${name}</h1>
         <div class="veh">${v.generation ? html`<a href="/vozila${qs({ make: v.make_id, gen: v.model_id })}">${v.make_name} ${v.generation}</a>` : ''}</div>
         <dl class="facts">
-          ${[['Godište', v.year], ['Gorivo', v.fuel], ['Motor', v.engine], ['Kod motora', v.engine_code], ['Snaga', v.power_kw ? v.power_kw + ' kW' : null],
+          ${[['Godište', v.year], ['Gorivo', v.fuel], ['Motor', v.engine], ['Snaga', v.power_kw ? v.power_kw + ' kW' : null], ['Kod motora', v.engine_code],
             ['Mjenjač', v.gearbox], ['Broj brzina', v.gears], ['Kod mjenjača', v.gearbox_code], ['Pogon', v.drive], ['Karoserija', v.body], ['Boja', v.color], ['Kod boje', v.color_code], ['Kilometraža', v.mileage ? v.mileage.toLocaleString('bs-BA') + ' km' : null], ['Lokacija', v.city], ['Objavljeno', ago(v.created_at)]]
             .filter(x => x[1]).map(([a, b]) => html`<div><dt>${a}</dt><dd>${b}</dd></div>`)}
         </dl>

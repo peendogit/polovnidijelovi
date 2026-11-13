@@ -10,7 +10,7 @@ import crypto from 'node:crypto';
 import { app } from '../router.js';
 import { get, run, all, tx, UPLOAD_DIR } from '../db.js';
 import { findType } from '../types.js';
-import { COLORS, upper, gearsInt, HttpError, bad, str, int, num, bool, imgList, normalize, rateLimit } from '../lib.js';
+import { COLORS, upper, gearsInt, gearboxKind, HttpError, bad, str, int, num, bool, imgList, normalize, rateLimit } from '../lib.js';
 
 function feedUser(req) {
   const key = req.headers['x-api-key'];
@@ -116,12 +116,13 @@ app.post('/api/feed/parts', ({ req, body }) => {
       const type = findType(it.type || title);
       const d = {
         title, type_id: type?.id || null, make_id: m?.make_id || null, model_id: m?.id || null, model_text: m?.id ? null : str(m?.name || it.model || it.make, 80),
-        year: int(it.year), fuel: str(it.fuel, 30), engine: str(it.engine, 40), part_no: str(it.part_no, 60), side: str(it.side, 30), color: COLORS.includes(it.color) ? it.color : null, color_code: str(it.color_code, 20),
+        year: int(it.year), fuel: str(it.fuel, 30), engine: str(it.engine, 40), engine_code: upper(it.engine_code, 20), power_kw: int(it.power_kw), gearbox: gearboxKind(it.gearbox), gearbox_code: upper(it.gearbox_code, 20), gears: gearsInt(it.gears),
+        part_no: str(it.part_no, 60), side: str(it.side, 30), color: COLORS.includes(it.color) ? it.color : null, color_code: str(it.color_code, 20),
         condition: ['polovno', 'novo', 'oštećeno'].includes(it.condition) ? it.condition : (bool(it.damaged) ? 'oštećeno' : 'polovno'),
         price: num(it.price), negotiable: bool(it.negotiable), description: str(it.description, 4000),
         city: str(it.city, 60) || u.city, images: imgList(it.images, true), vehicle_id: veh?.id || null,
       };
-      d.search = normalize([title, type?.title, d.part_no, d.engine, d.description, it.make, it.model].join(' '));
+      d.search = normalize([title, type?.title, d.part_no, d.engine, d.engine_code, d.gearbox_code, d.description, it.make, it.model].join(' '));
       upsert('parts', u, ext, d); ok++;
     }
   });

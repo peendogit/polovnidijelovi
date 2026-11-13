@@ -92,6 +92,11 @@ CREATE TABLE IF NOT EXISTS parts (
   year INTEGER,
   fuel TEXT,
   engine TEXT,
+  engine_code TEXT,
+  power_kw INTEGER,
+  gearbox TEXT,          -- manuelni | automatik
+  gearbox_code TEXT,
+  gears INTEGER,         -- 4–9
   part_no TEXT,          -- kataloški / OEM broj
   side TEXT,             -- lijevo / desno / prednje / zadnje
   color TEXT,

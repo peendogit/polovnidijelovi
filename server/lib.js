@@ -159,4 +159,6 @@ export const COLOR_MERGE = {
 // po abecedi (č, ć, š, ž na svom mjestu); "ostalo" uvijek na kraju
 export const COLORS = [...COLOR_LIST.sort((a, b) => a.localeCompare(b, 'bs')), 'ostalo'];
 export const upper = (v, max) => { const s = str(v, max); return s ? s.toUpperCase() : null; };
+// mjenjač: samo 'manuelni' ili 'automatik' (DSG, tiptronic… = automatik)
+export const gearboxKind = v => { const s = String(v || '').toLowerCase(); return /auto|dsg|tiptr|cvt|steptr|s.?tronic|dct/.test(s) ? 'automatik' : /manu|ru[cč]n/.test(s) ? 'manuelni' : null; };
 export const gearsInt = v => { const n = int(v); return n >= 4 && n <= 9 ? n : null; };
