@@ -10,6 +10,7 @@ const P = {
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
   wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4 2.6-2.6z"/>',
   phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
+  list: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
   back: '<path d="M15 6l-6 6 6 6"/>',
   right: '<path d="M9 6l6 6-6 6"/>',
@@ -156,18 +157,40 @@ export function confirmBox(text, yes = 'Da') {
 // ---------- galerija ----------
 export function gallery(images, alt) {
   if (!images?.length) return html`<div class="gallery none">${icon('camera', 40, '#9AA0A8', 1.4)}</div>`;
-  return html`<div class="gallery"><div class="strip">${images.map((s, i) => html`<img src="${s}" alt="${alt} — slika ${i + 1}" data-i="${i}" ${i ? raw('loading="lazy"') : ''}>`)}</div>
-    ${images.length > 1 ? html`<span class="n"><span class="gi">1</span>/${images.length}</span>` : ''}</div>`;
+  const many = images.length > 1;
+  return html`<div class="gallery">
+    ${many ? html`<div class="thumbs">${images.map((s, i) => html`<button type="button" class="th ${i ? '' : 'on'}" data-t="${i}" aria-label="Slika ${i + 1}"><img src="${thumb(s)}" data-full="${s}" alt="" loading="lazy"></button>`)}</div>` : ''}
+    <div class="g-main"><div class="strip">${images.map((s, i) => html`<img src="${s}" alt="${alt} — slika ${i + 1}" data-i="${i}" ${i ? raw('loading="lazy"') : ''}>`)}</div>
+      ${many ? html`<button type="button" class="g-arr g-prev" aria-label="Prethodna slika">${icon('back', 24, '#fff')}</button><button type="button" class="g-arr g-next" aria-label="Sljedeća slika">${icon('right', 24, '#fff')}</button>
+      <span class="n"><span class="gi">1</span> od ${images.length}</span>` : ''}</div></div>`;
 }
 export function bindGallery(root, images) {
   const strip = $('.gallery .strip', root);
   if (!strip) return;
   const n = $('.gallery .gi', root);
-  strip.addEventListener('scroll', () => { if (n) n.textContent = Math.round(strip.scrollLeft / strip.clientWidth) + 1; }, { passive: true });
+  const ths = [...root.querySelectorAll('.gallery .th')];
+  const cur = () => Math.round(strip.scrollLeft / strip.clientWidth);
+  const to = i => strip.scrollTo({ left: Math.max(0, Math.min(images.length - 1, i)) * strip.clientWidth, behavior: 'smooth' });
+  strip.addEventListener('scroll', () => {
+    const i = cur();
+    if (n) n.textContent = i + 1;
+    ths.forEach((t, k) => t.classList.toggle('on', k === i));
+    ths[i]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, { passive: true });
+  ths.forEach(t => { t.onclick = () => to(Number(t.dataset.t)); });
+  // ako mala slika ne postoji, pokaži veliku
+  ths.forEach(t => { const im = t.firstElementChild; const full = () => { if (im.src !== new URL(im.dataset.full, location.href).href) im.src = im.dataset.full; };
+    if (im.complete && !im.naturalWidth) full(); else im.addEventListener('error', full, { once: true }); });
+  $('.gallery .g-prev', root)?.addEventListener('click', () => to(cur() - 1));
+  $('.gallery .g-next', root)?.addEventListener('click', () => to(cur() + 1));
   strip.addEventListener('click', e => {
     if (e.target.dataset.i === undefined) return;
     lightbox(images, Number(e.target.dataset.i), i => { strip.scrollLeft = i * strip.clientWidth; });
   });
+}
+// putanja na vrhu stranice: Početna / Dijelovi / Marka / Model / naslov
+export function crumbs(items) {
+  return html`<nav class="crumbs" aria-label="Putanja">${items.filter(Boolean).map(([t, href], i, all) => html`${i ? html`<span class="sep">/</span>` : ''}${href && i < all.length - 1 ? html`<a href="${href}">${t}</a>` : html`<span>${t}</span>`}`)}</nav>`;
 }
 
 // Slike preko cijelog ekrana: listanje prstom (ili strelicama), "nazad" zatvara

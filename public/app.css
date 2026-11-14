@@ -155,6 +155,26 @@ fieldset{border:0;margin:0;padding:0}
 
 /* ---------- detalj ---------- */
 .gallery{position:relative;background:#111;}
+.gallery .g-main{position:relative}
+.gallery .thumbs,.gallery .g-arr{display:none}
+.g-arr{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border:0;border-radius:10px;background:rgba(27,30,34,.85);cursor:pointer;align-items:center;justify-content:center;z-index:2}
+.g-arr:hover{background:#1B1E22}
+.g-prev{left:12px}.g-next{right:12px}
+.crumbs{display:none;padding:14px 16px 0;font-size:14px;color:var(--muted);flex-wrap:wrap;gap:6px;align-items:center}
+.crumbs a{color:var(--text);text-decoration:none}.crumbs a:hover{text-decoration:underline}
+.crumbs span:last-child{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px}
+.crumbs .sep{color:#A3A8AE}
+/* detalj: telefon redom — slike, cijena i dugmad, opis, podaci; računar dvije kolone */
+.det-grid{display:flex;flex-direction:column}
+.dg-col{display:contents}
+.dg-media{order:1}.dg-side{order:2}.dg-desc{order:3;margin-top:10px}.dg-info{order:4;margin-top:10px}.dg-own{order:5;margin-top:10px}
+.det-h{display:flex;align-items:center;gap:8px;font-size:18px;margin:0 0 10px}
+.sku{font-size:13px;color:var(--muted);margin-bottom:4px}
+.price-row{display:flex;align-items:center;gap:4px}
+.price-row .price{flex:1}
+.icon-btn.round{border-radius:50%;color:var(--text)}
+.seller-box{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.rep{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;margin-top:6px}
 .gallery .strip{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
 .gallery .strip::-webkit-scrollbar{display:none}
 .gallery .strip img{flex:0 0 100%;width:100%;height:300px;object-fit:contain;scroll-snap-align:start;background:#111;cursor:zoom-in}
@@ -246,10 +266,28 @@ fieldset{border:0;margin:0;padding:0}
   .list.cols{display:grid;grid-template-columns:1fr 1fr}
   .list.cols .row-item{border-right:1px solid #ECEDEB}
   .stats{grid-template-columns:repeat(5,1fr)}
-  .gallery .strip img{height:440px}
-  .det-grid{display:grid;grid-template-columns:3fr 2fr;gap:16px;padding:16px 24px 0;align-items:start}
-  .det-grid .gallery{border-radius:var(--r);overflow:hidden}
-  .det-grid .det{border-radius:var(--r)}
+  .crumbs{display:flex;padding:16px 24px 0;max-width:1240px;margin:0 auto}
+  .det-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:20px;padding:14px 24px 0;align-items:start;max-width:1240px;margin:0 auto}
+  .dg-col{display:flex;flex-direction:column;gap:16px}
+  .dg-col>*{order:0!important;margin-top:0!important}
+  .det-grid .det{border-radius:var(--r);padding:20px}
+  .dg-side{position:sticky;top:76px}
+  .det-grid .gallery{display:flex;gap:12px;background:transparent}
+  .det-grid .gallery.none{height:420px;background:var(--ph);border-radius:var(--r)}
+  .det-grid .gallery .thumbs{display:flex;flex-direction:column;gap:10px;width:96px;flex-shrink:0;max-height:520px;overflow-y:auto;scrollbar-width:thin}
+  .gallery .th{padding:0;border:2px solid transparent;border-radius:10px;overflow:hidden;background:#fff;cursor:pointer;height:84px;flex-shrink:0}
+  .gallery .th img{width:100%;height:100%;object-fit:cover;display:block}
+  .gallery .th.on{border-color:var(--accent)}
+  .det-grid .gallery .g-main{flex:1;min-width:0;border-radius:var(--r);overflow:hidden;background:#E9EAE7}
+  .det-grid .gallery .strip img{height:520px;background:#E9EAE7}
+  .det-grid .g-arr{display:flex}
+  .det-grid .gallery .n{left:14px;right:auto;bottom:14px;border-radius:14px;padding:4px 12px;background:rgba(27,30,34,.85)}
+  .det-grid .dg-side h1{font-size:26px}
+  .dg-info .facts{display:block;border:0;margin:0}
+  .dg-info .facts div{flex-direction:row;justify-content:space-between;gap:16px;padding:11px 4px;border:0!important;border-bottom:1px solid var(--line)!important;margin:0}
+  .dg-info .facts div:last-child{border-bottom:0!important}
+  .dg-info .facts dt{font-size:15px;font-weight:500;color:var(--muted)}
+  .dg-info .facts dd{font-size:15px;text-align:right}
   .modal{align-items:center}
   .modal .box{border-radius:14px}
 }

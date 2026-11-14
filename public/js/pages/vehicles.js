@@ -1,6 +1,6 @@
 import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, getMeta } from '../core.js';
 import { vehicleUrl, canonical } from '../core.js';
-import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES, antiSpam, filterFields, bindFilters, hasFilters } from '../components.js';
+import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES, antiSpam, filterFields, bindFilters, hasFilters, crumbs } from '../components.js';
 import { inquiryModal, share, reportModal } from './parts.js';
 
 // Vozila za dijelove — filter i lista (nacrt 5)
@@ -87,32 +87,36 @@ export async function vehiclePage({ el, params }) {
   const name = v.vehicle || v.model_text;
   setTitle(`${name} ${v.year || ''} — vozilo za dijelove`);
   canonical(vehicleUrl(v));
+  const facts = [['Godište', v.year], ['Gorivo', v.fuel], ['Motor', v.engine], ['Snaga', v.power_kw ? v.power_kw + ' kW' : null], ['Kod motora', v.engine_code],
+    ['Mjenjač', v.gearbox], ['Broj brzina', v.gears], ['Kod mjenjača', v.gearbox_code], ['Pogon', v.drive], ['Karoserija', v.body], ['Boja', v.color], ['Kod boje', v.color_code], ['Kilometraža', v.mileage ? v.mileage.toLocaleString('bs-BA') + ' km' : null], ['Lokacija', v.city], ['Objavljeno', ago(v.created_at)]]
+    .filter(x => x[1]);
   render(el, html`
+  ${crumbs([['Početna', '/'], ['Vozila za dijelove', '/vozila'], v.make_name && [v.make_name, '/vozila' + qs({ make: v.make_id })], v.generation && [v.generation, '/vozila' + qs({ make: v.make_id, gen: v.model_id })], [`${name} ${v.year || ''}`]])}
   <div class="det-grid">
-    <div>${gallery(v.images, name)}</div>
-    <div class="stack" style="gap:0">
-      <div class="det">
+    <div class="dg-col">
+      <div class="dg-media">${gallery(v.images, name)}</div>
+      <div class="det dg-info">
+        <h2 class="det-h">${icon('list', 20)} Podaci o vozilu</h2>
+        <dl class="facts">${facts.map(([a, b]) => html`<div><dt>${a}</dt><dd>${b}</dd></div>`)}</dl>
+      </div>
+    </div>
+    <div class="dg-col">
+      <div class="det dg-side" id="pitaj">
         <p style="margin:0 0 8px"><span class="badge ${v.status === 'active' ? 'dark' : ''}">${v.status === 'active' ? 'Rastavlja se' : v.status === 'done' ? 'Rastavljeno' : 'Skriveno'}</span></p>
         <h1>${name}</h1>
-        <div class="veh">${v.generation ? html`<a href="/vozila${qs({ make: v.make_id, gen: v.model_id })}">${v.make_name} ${v.generation}</a>` : ''}</div>
-        <dl class="facts">
-          ${[['Godište', v.year], ['Gorivo', v.fuel], ['Motor', v.engine], ['Snaga', v.power_kw ? v.power_kw + ' kW' : null], ['Kod motora', v.engine_code],
-            ['Mjenjač', v.gearbox], ['Broj brzina', v.gears], ['Kod mjenjača', v.gearbox_code], ['Pogon', v.drive], ['Karoserija', v.body], ['Boja', v.color], ['Kod boje', v.color_code], ['Kilometraža', v.mileage ? v.mileage.toLocaleString('bs-BA') + ' km' : null], ['Lokacija', v.city], ['Objavljeno', ago(v.created_at)]]
-            .filter(x => x[1]).map(([a, b]) => html`<div><dt>${a}</dt><dd>${b}</dd></div>`)}
-        </dl>
-        ${v.description ? html`<div class="desc">${v.description}</div>` : ''}
-      </div>
-      <div class="det" style="margin-top:10px" id="pitaj">
-        ${sellerBlock(v.seller)}
-        <div class="btns3" style="margin-top:12px">${contactButtons(v.seller, `${name} ${v.year || ''} — ${location.origin}${vehicleUrl(v)}`)}</div>
+        <div class="veh">${[v.generation ? html`<a href="/vozila${qs({ make: v.make_id, gen: v.model_id })}">${v.make_name} ${v.generation}</a>` : '', [v.year, v.engine, v.fuel].filter(Boolean).join(' · ')].filter(Boolean).map((x, i) => html`${i ? html`<br>` : ''}${x}`)}</div>
+        <div class="price-row">
+          <div class="price" style="font-size:22px">Vozilo za dijelove</div>
+          <button class="icon-btn round" id="share" aria-label="Podijeli">${icon('share', 22)}</button>
+          <button class="icon-btn round" id="fav" aria-label="${v.fav ? 'Ukloni iz sačuvanih' : 'Sačuvaj'}">${icon('heart', 22, v.fav ? '#B42318' : 'currentColor')}</button>
+        </div>
+        <div class="btns3" style="margin-top:14px">${contactButtons(v.seller, `${name} ${v.year || ''} — ${location.origin}${vehicleUrl(v)}`)}</div>
         ${v.mine ? '' : html`<button class="btn dark block big" id="ask" style="margin-top:8px">${icon('chat', 18, '#fff')} Pitaj za dio sa ovog vozila</button>`}
+        <div class="seller-box">${sellerBlock(v.seller)}</div>
+        ${v.mine ? '' : html`<button class="link rep" id="rep">${icon('flag', 14)} Prijavi oglas</button>`}
       </div>
-      <div class="det" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn line sm" id="fav">${icon('heart', 18, v.fav ? '#B42318' : 'currentColor')} ${v.fav ? 'Sačuvano' : 'Sačuvaj'}</button>
-        <button class="btn line sm" id="share">${icon('share', 18)} Podijeli</button>
-        ${v.mine ? '' : html`<button class="btn ghost sm" id="rep">${icon('flag', 16)} Prijavi</button>`}
-      </div>
-      ${v.mine ? html`<div class="det" style="margin-top:10px">
+      ${v.description ? html`<div class="det dg-desc"><h2 class="det-h">${icon('chat', 20)} Opis prodavca</h2><div class="desc">${v.description}</div></div>` : ''}
+      ${v.mine ? html`<div class="det dg-own">
         <strong>${v.user_id === state.user?.id ? 'Tvoje vozilo' : 'Administrator — tuđe vozilo'}</strong> <span class="hint">· ${v.views} pregleda</span>
         <div class="btns" style="margin-top:10px">
           <a class="btn accent" href="/objavi/dio?vozilo=${v.id}">${icon('plus', 18)} Dodaj dio</a>
