@@ -664,13 +664,13 @@ export async function typeSuggest(input, hidden, onPick) {
 
 // ---------- dodatni filteri: gorivo, godište, grad, motor, karoserija, pogon, mjenjač, boja ----------
 // Isti na početnoj, dijelovima i vozilima. Telefon: dugmići (klik otvori polje). Računar: sva polja odmah vidljiva.
-export const FILTER_KEYS = ['fuel', 'from', 'to', 'city', 'engine', 'body', 'drive', 'gearbox', 'color'];
+export const FILTER_KEYS = ['fuel', 'from', 'to', 'city', 'engine', 'body', 'drive', 'gearbox', 'color', 'color_code'];
 export const hasFilters = q => FILTER_KEYS.some(k => q[k]);
 export async function filterFields(q = {}, light = false) {
   const meta = await getMeta();
   const yr = q.from || q.to ? `${q.from || ''}–${q.to || ''}` : '';
   const chips = [['fuel', 'Gorivo', q.fuel], ['year', 'Godište', yr], ['city', 'Grad', q.city], ['engine', 'Motor', q.engine], ['body', 'Karoserija', q.body],
-    ['drive', 'Pogon', q.drive], ['gearbox', 'Mjenjač', q.gearbox], ['color', 'Boja', q.color]];
+    ['drive', 'Pogon', q.drive], ['gearbox', 'Mjenjač', q.gearbox], ['color', 'Boja', q.color], ['color_code', 'Kod boje', q.color_code]];
   return html`<div class="fx">
     <div class="chips">${chips.map(([x, label, val]) => html`<button type="button" class="chip ${light ? 'light' : ''} ${val ? 'on' : ''}" data-x="${x}">${label}${val ? ': ' + val : ''}</button>`)}</div>
     <div class="fx-fields">
@@ -683,6 +683,7 @@ export async function filterFields(q = {}, light = false) {
       <label class="f" data-f="drive"><span>Pogon</span>${optSelect('drive', DRIVES, q.drive, 'Svejedno')}</label>
       <label class="f" data-f="gearbox"><span>Mjenjač</span>${optSelect('gearbox', GEARBOXES, q.gearbox, 'Svejedno')}</label>
       <label class="f" data-f="color"><span>Boja</span>${optSelect('color', meta.colors, q.color, 'Sve')}</label>
+      <label class="f" data-f="color_code"><span>Kod boje</span><input name="color_code" value="${q.color_code || ''}" placeholder="npr. LC9X" class="caps" autocapitalize="characters" autocomplete="off" maxlength="20"></label>
     </div></div>`;
 }
 // box: element u kojem je filterFields; pickerBox + picker: izbor vozila (godine idu po izabranoj generaciji)
@@ -690,7 +691,7 @@ export function bindFilters(box, pickerBox, picker, q = {}) {
   $$('.fx .chip', box).forEach(c => {
     c.onclick = () => {
       $$('.fx-fields [data-f]', box).forEach(x => x.classList.toggle('show', x.dataset.f === c.dataset.x));
-      $(`.fx-fields [data-f="${c.dataset.x}"] select`, box)?.focus();
+      $(`.fx-fields [data-f="${c.dataset.x}"] select, .fx-fields [data-f="${c.dataset.x}"] input`, box)?.focus();
     };
   });
   const yFrom = $('.fx select[name=from]', box), yTo = $('.fx select[name=to]', box);
@@ -709,5 +710,9 @@ export function bindFilters(box, pickerBox, picker, q = {}) {
   pickerBox.addEventListener('pick', draw);
   draw();
   // vrijednosti filtera za link
-  return () => Object.fromEntries(FILTER_KEYS.map(k => [k, $(`.fx [name=${k}]`, box)?.value || undefined]));
+  return () => Object.fromEntries(FILTER_KEYS.map(k => {
+    let v = ($(`.fx [name=${k}]`, box)?.value || '').trim();
+    if (k === 'color_code') v = v.toUpperCase();
+    return [k, v || undefined];
+  }));
 }

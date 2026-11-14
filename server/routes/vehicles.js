@@ -17,6 +17,7 @@ export function listVehicles(q, extraW = [], extraA = []) {
   if (q.fuel) { w.push('v.fuel=?'); a.push(q.fuel); }
   if (q.city) { w.push('v.city=?'); a.push(q.city); }
   if (q.color) { w.push('v.color=?'); a.push(String(q.color)); }
+  if (q.color_code) { w.push('UPPER(v.color_code)=?'); a.push(String(q.color_code).trim().toUpperCase().slice(0, 20)); }
   if (q.seller) { w.push('v.user_id=?'); a.push(int(q.seller)); }
   if (q.from) { w.push('v.year>=?'); a.push(int(q.from)); }
   if (q.to) { w.push('v.year<=?'); a.push(int(q.to)); }

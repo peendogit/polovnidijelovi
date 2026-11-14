@@ -29,6 +29,7 @@ export function listParts(q, extraWhere = [], extraArgs = []) {
   if (q.body) { w.push(`${VF('body')}=?`); a.push(String(q.body)); }
   if (q.drive) { w.push(`${VF('drive')}=?`); a.push(String(q.drive)); }
   if (q.color) { w.push(`${VF('color')}=?`); a.push(String(q.color)); }
+  if (q.color_code) { w.push(`UPPER(${VF('color_code')})=?`); a.push(String(q.color_code).trim().toUpperCase().slice(0, 20)); }
   if (q.gearbox === 'automatik') w.push(`(${VF('gearbox')} LIKE 'automatik%' OR ${VF('gearbox')}='DSG')`);
   else if (q.gearbox === 'manuelni') w.push(`${VF('gearbox')} LIKE 'manuelni%'`);
   if (q.seller) { w.push('p.user_id=?'); a.push(int(q.seller)); }
