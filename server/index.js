@@ -144,6 +144,9 @@ const server = http.createServer(async (req, res) => {
       return send(req, res, 200, `User-agent: *\nDisallow: /api/\nDisallow: /profil\nDisallow: /admin\nSitemap: https://${safeHost(req)}/sitemap.xml\n`, TYPES['.txt']);
     }
 
+    // stari nazivi ikonica -> nove (stare instalacije aplikacije dobiju ključ)
+    const OLD_ICONS = { '/icons/icon-192.png': '/icons/kljuc-192.png', '/icons/icon-512.png': '/icons/kljuc-512.png', '/icons/maskable-512.png': '/icons/kljuc-maskable-512.png', '/icons/apple-touch-icon.png': '/icons/kljuc-apple-180.png', '/favicon.svg': '/kljuc.svg', '/favicon.ico': '/icons/kljuc-192.png', '/apple-touch-icon.png': '/icons/kljuc-apple-180.png', '/apple-touch-icon-precomposed.png': '/icons/kljuc-apple-180.png' };
+    if (OLD_ICONS[p]) return serveFile(req, res, path.join(PUB, OLD_ICONS[p]), 'no-cache');
     // ---------- statički fajlovi ----------
     if (/\.[a-z0-9]+$/i.test(p) && !p.includes('..')) {
       const f = path.join(PUB, p);

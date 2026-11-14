@@ -120,7 +120,7 @@ function drawInstallBar() {
   try { hidden = Date.now() - Number(localStorage.getItem('pd_inst_x') || 0) < 14 * 864e5; } catch { /* */ }
   if (!canInstall() || hidden) { b?.remove(); return; }
   if (!b) { b = document.createElement('div'); b.id = 'instbar'; b.className = 'instbar'; document.body.appendChild(b); }
-  render(b, html`<img src="/icons/icon-192.png" alt="" width="40" height="40"><div><strong>Polovni dijelovi na telefonu</strong><span>Brže otvaranje, ikona na početnom ekranu</span></div>
+  render(b, html`<img src="/icons/kljuc-192.png" alt="" width="40" height="40"><div><strong>Polovni dijelovi na telefonu</strong><span>Brže otvaranje, ikona na početnom ekranu</span></div>
     <button class="btn accent sm" id="instb">Instaliraj</button><button class="icon-btn" id="instx" aria-label="Zatvori">${icon('x', 18, '#fff')}</button>`);
   $('#instb', b).onclick = installApp;
   $('#instx', b).onclick = () => { try { localStorage.setItem('pd_inst_x', Date.now()); } catch { /* */ } b.remove(); };
