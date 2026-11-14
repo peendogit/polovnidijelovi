@@ -23,6 +23,7 @@ if (!cols('vehicles').includes('color_code')) {
 }
 if (!cols('vehicles').includes('gearbox_code')) db.exec('ALTER TABLE vehicles ADD COLUMN gearbox_code TEXT');
 if (!cols('vehicles').includes('gears')) db.exec('ALTER TABLE vehicles ADD COLUMN gears INTEGER');
+if (!cols('vehicles').includes('featured_until')) db.exec('ALTER TABLE vehicles ADD COLUMN featured_until TEXT');
 if (!cols('users').includes('email_verified')) {
   db.exec('ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0');
   db.exec('UPDATE users SET email_verified=1'); // postojeći korisnici ostaju kako jesu
@@ -43,7 +44,7 @@ if (!db.prepare('SELECT COUNT(*) c FROM part_types').get().c) {
 }
 if (!cols('parts').includes('color')) db.exec('ALTER TABLE parts ADD COLUMN color TEXT');
 if (!cols('parts').includes('color_code')) db.exec('ALTER TABLE parts ADD COLUMN color_code TEXT');
-for (const [c, t] of [['engine_code', 'TEXT'], ['power_kw', 'INTEGER'], ['gearbox', 'TEXT'], ['gearbox_code', 'TEXT'], ['gears', 'INTEGER'], ['body', 'TEXT'], ['drive', 'TEXT']])
+for (const [c, t] of [['engine_code', 'TEXT'], ['power_kw', 'INTEGER'], ['gearbox', 'TEXT'], ['gearbox_code', 'TEXT'], ['gears', 'INTEGER'], ['body', 'TEXT'], ['drive', 'TEXT'], ['featured_until', 'TEXT']])
   if (!cols('parts').includes(c)) db.exec(`ALTER TABLE parts ADD COLUMN ${c} ${t}`);
 
 // Prvo pokretanje: ubaci marke i modele

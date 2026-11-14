@@ -1,17 +1,17 @@
 import { html, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, getMakes } from '../core.js';
-import { confirmBox, modal } from '../components.js';
+import { confirmBox, modal, fmtDate } from '../components.js';
 
 export async function adminPage({ el, params }) {
   if (!state.user?.is_admin) return go('/', true);
   setTitle('Administracija');
   const tab = params.tab || 'pregled';
-  const tabs = [['pregled', 'Pregled'], ['korisnici', 'Korisnici'], ['modeli', 'Modeli'], ['prijave', 'Prijave'], ['spam', 'Spam']];
+  const tabs = [['pregled', 'Pregled'], ['korisnici', 'Korisnici'], ['modeli', 'Modeli'], ['istaknuto', 'Istaknuto'], ['prijave', 'Prijave'], ['spam', 'Spam']];
   render(el, html`
   <section class="page-head" style="padding-bottom:8px"><div class="row"><h1 style="padding-left:12px">Administracija</h1></div></section>
   <nav class="tabs">${tabs.map(t => html`<a href="/admin/${t[0]}" class="${t[0] === tab ? 'on' : ''}">${t[1]}</a>`)}</nav>
   <div class="wrap" style="padding-top:14px" id="at"></div>`);
   const box = $('#at', el);
-  await ({ pregled: overview, korisnici: users, modeli: models, prijave: reports, spam }[tab] || overview)(box);
+  await ({ pregled: overview, korisnici: users, modeli: models, istaknuto: featured, prijave: reports, spam }[tab] || overview)(box);
 }
 
 async function overview(box) {
@@ -142,4 +142,38 @@ async function spam(box) {
   $('#bf', box).onsubmit = async e => { e.preventDefault(); try { await api('/api/admin/blocklist', { body: formData(e.target) }); toast('Blokirano'); spam(box); } catch (err) { fail(err); } };
   $$('[data-blk]', box).forEach(b => { b.onclick = async () => { try { await api('/api/admin/blocklist', { body: { kind: 'phone', value: b.dataset.blk, reason: 'admin' } }); toast('Blokirano'); spam(box); } catch (e) { fail(e); } }; });
   $$('[data-unb]', box).forEach(b => { b.onclick = async () => { try { await api('/api/admin/blocklist/' + encodeURIComponent(b.dataset.unb), { method: 'DELETE' }); toast('Odblokirano'); spam(box); } catch (e) { fail(e); } }; });
+}
+
+// ---------- istaknuti oglasi ----------
+async function featured(box) {
+  const d = await api('/api/admin/featured');
+  const url = (k, id) => (k === 'vehicle' ? '/vozilo/' : '/dio/') + id;
+  const prices = [...d.prices, {}, {}].slice(0, 4);
+  render(box, html`
+    <div class="stats" style="margin-bottom:14px"><div class="stat"><b>${d.requests.length}</b><span>Zahtjeva čeka</span></div><div class="stat"><b>${d.active.length}</b><span>Trenutno istaknuto</span></div><div class="stat"><b>${d.earned_30d} KM</b><span>Odobreno (30 dana)</span></div></div>
+    <h2 style="font-size:22px;margin:0 0 8px">Zahtjevi</h2>
+    <p class="hint" style="margin:0 0 8px">Pozovi korisnika, dogovori uplatu, pa kad stigne klikni „Odobri“ — oglas odmah ide na vrh.</p>
+    ${d.requests.length ? html`<div class="list">${d.requests.map(r => html`<div class="row-item" style="flex-direction:column;gap:6px">
+      <div style="display:flex;justify-content:space-between;width:100%;gap:8px"><a href="${url(r.kind, r.item_id)}"><strong>${r.title || '(obrisan oglas)'}</strong></a><span class="hint">${ago(r.created_at)}</span></div>
+      <span class="hint">${r.kind === 'vehicle' ? 'Vozilo' : 'Dio'} · <strong style="color:var(--text)">${r.days} dana · ${r.price} KM</strong> · ${r.user_name || ''} ${r.user_phone ? html`· <a href="tel:${r.user_phone}">${r.user_phone}</a>` : ''}</span>
+      <div style="display:flex;gap:6px"><button class="btn accent sm" data-fr="${r.id}" data-a="approve">Odobri (uplaćeno)</button><button class="btn ghost sm" data-fr="${r.id}" data-a="reject">Odbij</button></div>
+    </div>`)}</div>` : html`<div class="empty">Nema novih zahtjeva.</div>`}
+    <h2 style="font-size:22px;margin:18px 0 8px">Trenutno istaknuto</h2>
+    ${d.active.length ? html`<div class="list">${d.active.map(a => html`<div class="row-item" style="align-items:center">
+      <div class="info"><a href="${url(a.kind, a.id)}"><strong>${a.title}</strong></a><span class="hint">${a.kind === 'vehicle' ? 'Vozilo' : 'Dio'} · ${a.user_name} · do ${fmtDate(a.featured_until)}</span></div>
+      <button class="btn ghost sm" data-un="${a.kind}:${a.id}">Skini</button></div>`)}</div>` : html`<div class="empty">Ništa nije istaknuto.</div>`}
+    <p class="hint">Bilo koji oglas možeš istaknuti i sam: otvori oglas pa dole „Istakni (admin)“.</p>
+    <form class="card stack" id="fsF" style="margin-top:14px"><strong style="font-size:17px">Paketi i uputstvo za uplatu</strong>
+      ${prices.map((p, i) => html`<div class="grid2"><label class="f"><span>Paket ${i + 1}: broj dana</span><input name="d${i}" inputmode="numeric" value="${p.days || ''}" placeholder="${i < 2 ? '' : 'prazno = nema'}"></label>
+        <label class="f"><span>Cijena (KM)</span><input name="p${i}" inputmode="decimal" value="${p.price ?? ''}"></label></div>`)}
+      <label class="f"><span>Šta korisnik vidi o uplati</span><textarea name="pay_info" rows="3">${d.pay_info}</textarea></label>
+      <button class="btn dark block">Sačuvaj</button></form>`);
+  $$('[data-fr]', box).forEach(b => { b.onclick = async () => { try { await api('/api/admin/featured/' + b.dataset.fr, { body: { action: b.dataset.a } }); toast(b.dataset.a === 'approve' ? 'Odobreno — oglas je istaknut' : 'Odbijeno'); featured(box); } catch (e) { fail(e); } }; });
+  $$('[data-un]', box).forEach(b => { b.onclick = async () => { const [kind, id] = b.dataset.un.split(':'); try { await api('/api/admin/feature', { body: { kind, id, days: 0 } }); toast('Skinuto'); featured(box); } catch (e) { fail(e); } }; });
+  $('#fsF', box).onsubmit = async e => {
+    e.preventDefault();
+    const f = formData(e.target);
+    const list = [0, 1, 2, 3].map(i => ({ days: f['d' + i], price: f['p' + i] })).filter(p => p.days && p.price !== '');
+    try { await api('/api/admin/featured-settings', { body: { prices: list, pay_info: f.pay_info } }); toast('Sačuvano'); featured(box); } catch (err) { fail(err); }
+  };
 }

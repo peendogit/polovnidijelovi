@@ -11,6 +11,7 @@ const P = {
   wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4 2.6-2.6z"/>',
   phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
   list: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/>',
+  star: '<path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
   back: '<path d="M15 6l-6 6 6 6"/>',
   right: '<path d="M9 6l6 6-6 6"/>',
@@ -45,9 +46,10 @@ export const verifiedBadge = v => v ? html`<span class="verified">${icon('shield
 // ---------- kartice ----------
 export function partRow(p, opts = {}) {
   const st = p.status && p.status !== 'active' ? html` <span class="badge ${p.status === 'sold' ? 'ok' : ''}">${p.status === 'sold' ? 'Prodato' : 'Skriveno'}</span>` : '';
-  return html`<a class="row-item" href="${partUrl(p)}">
+  return html`<a class="row-item ${p.featured ? 'feat' : ''}" href="${partUrl(p)}">
     <span class="thumb-wrap">${img(p.images?.[0], 'thumb', p.title)}${p.condition === 'oštećeno' ? html`<span class="dmg">oštećeno</span>` : ''}</span>
     <div class="info">
+      ${p.featured ? html`<span class="feat-b">${icon('star', 12, '#1B1E22', 2.2)} Istaknuto</span>` : ''}
       <span class="t">${p.title}${st}</span>
       <span class="s">${[p.vehicle || p.model_text, p.year].filter(Boolean).join(' · ')}</span>
       <span class="s">${[p.seller_name && !opts.noSeller ? p.seller_name : null, p.city].filter(Boolean).join(' · ')}${opts.views ? ` · ${p.views} pregleda` : ''}</span>
@@ -72,7 +74,7 @@ export function vehicleRow(v, opts = {}) {
 // mala kartica vozila (početna: najnovijih 5)
 export function vehicleTile(v) {
   return html`<a class="vtile" href="${vehicleUrl(v)}">
-    <span class="ph">${v.images?.[0] ? html`<img src="${thumb(v.images[0])}" data-full="${v.images[0]}" alt="${v.vehicle || v.model_text}" loading="lazy">` : icon('car', 32, '#9AA0A8', 1.4)}</span>
+    <span class="ph">${v.images?.[0] ? html`<img src="${thumb(v.images[0])}" data-full="${v.images[0]}" alt="${v.vehicle || v.model_text}" loading="lazy">` : icon('car', 32, '#9AA0A8', 1.4)}${v.featured ? html`<span class="feat-b">${icon('star', 12, '#1B1E22', 2.2)} Istaknuto</span>` : ''}</span>
     <span class="name">${v.vehicle || v.model_text}</span>
     <span class="meta">${[v.year, v.engine, v.fuel].filter(Boolean).join(' · ')}</span>
     <span class="meta">${v.city || v.seller_name || ''}</span>
@@ -84,10 +86,10 @@ export function vehicleCard(v) {
   const imgs = (v.images || []).slice(0, 6);
   const specs = [v.engine && (v.engine + (v.engine_code ? ' ' + v.engine_code : '')), v.power_kw && v.power_kw + ' kW', v.gearbox, v.body, v.drive === '4x4' ? '4x4' : null].filter(Boolean);
   const name = v.vehicle || v.model_text;
-  return html`<article class="vcard">
+  return html`<article class="vcard ${v.featured ? 'feat' : ''}">
     <a href="${vehicleUrl(v)}" class="ph" ${imgs.length > 1 ? raw(`data-imgs="${esc(imgs.join('|'))}"`) : ''} aria-label="${name}">
       ${imgs[0] ? html`<img src="${imgs[0]}" alt="${name}" loading="lazy">` : icon('car', 44, '#9AA0A8', 1.4)}
-      ${isNew(v.created_at) ? html`<span class="badge acc">NOVO NA PLACU</span>` : html`<span class="badge dark">Rastavlja se</span>`}
+      ${v.featured ? html`<span class="badge acc">${icon('star', 12, '#1B1E22', 2.2)} ISTAKNUTO</span>` : isNew(v.created_at) ? html`<span class="badge acc">NOVO NA PLACU</span>` : html`<span class="badge dark">Rastavlja se</span>`}
       ${imgs.length > 1 ? html`<span class="pc">${icon('camera', 14, '#fff')} ${v.images.length}</span><span class="segs">${imgs.map((_, i) => html`<i class="${i ? '' : 'on'}"></i>`)}</span>` : ''}
       ${v.year ? html`<span class="yr">${v.year}</span>` : ''}
     </a>
@@ -754,4 +756,44 @@ export function bindFilters(box, pickerBox, picker, q = {}) {
     if (k === 'color_code') v = v.toUpperCase();
     return [k, v || undefined];
   }));
+}
+
+// ---------- istaknuti oglas ----------
+export const fmtDate = d => { const x = new Date(String(d).replace(' ', 'T') + 'Z'); if (isNaN(x)) return ''; const p = n => String(n).padStart(2, '0'); return `${p(x.getDate())}.${p(x.getMonth() + 1)}.${x.getFullYear()}.`; };
+// kutija za vlasnika/admina na stranici oglasa
+export function featureBox(item, kind) {
+  const admin = state.user?.is_admin;
+  const until = item.featured ? html`<div class="feat-on">${icon('star', 18, '#1B1E22', 2)} Istaknuto do <strong>${fmtDate(item.featured_until)}</strong></div>` : '';
+  const ask = item.featured || item.status !== 'active' || item.user_id !== state.user?.id ? ''
+    : item.pending_feature ? html`<div class="hint" style="margin-top:8px">Zahtjev za isticanje je poslan — javićemo ti se radi uplate.</div>`
+      : html`<button class="btn accent block" data-feat="${kind}:${item.id}" style="margin-top:10px">${icon('star', 18, '#1B1E22', 2)} Istakni oglas — budi na vrhu</button>`;
+  const adm = admin ? html`<div class="feat-adm"><select data-fdays><option value="7">7 dana</option><option value="14">14 dana</option><option value="30">30 dana</option></select>
+    <button class="btn line sm" data-fadm="${kind}:${item.id}">Istakni (admin)</button>${item.featured ? html`<button class="btn ghost sm" data-funset="${kind}:${item.id}">Skini</button>` : ''}</div>` : '';
+  return html`${until}${ask}${adm}`;
+}
+export function bindFeatureBox(root, reload) {
+  root.querySelector('[data-feat]')?.addEventListener('click', e => { const [k, id] = e.currentTarget.dataset.feat.split(':'); featureModal(k, id, reload); });
+  root.querySelector('[data-fadm]')?.addEventListener('click', async e => {
+    const [kind, id] = e.currentTarget.dataset.fadm.split(':');
+    try { await api('/api/admin/feature', { body: { kind, id, days: root.querySelector('[data-fdays]').value } }); toast('Istaknuto'); reload(); } catch (err) { fail(err); }
+  });
+  root.querySelector('[data-funset]')?.addEventListener('click', async e => {
+    const [kind, id] = e.currentTarget.dataset.funset.split(':');
+    try { await api('/api/admin/feature', { body: { kind, id, days: 0 } }); toast('Skinuto'); reload(); } catch (err) { fail(err); }
+  });
+}
+export async function featureModal(kind, id, done) {
+  let info;
+  try { info = await api('/api/featured/info'); } catch (e) { return fail(e); }
+  modal('Istakni oglas', html`<form class="stack" id="ftF">
+    <p style="margin:0">Istaknut oglas je <strong>na vrhu pretrage</strong>, ${kind === 'vehicle' ? 'među prvima u „Najnovija vozila“ na početnoj' : 'u odjeljku „Istaknuto“ na početnoj'} i ima žutu oznaku <strong>Istaknuto</strong>.</p>
+    <div class="packs">${info.prices.map((p, i) => html`<label class="pack"><input type="radio" name="days" value="${p.days}" ${i ? '' : raw('checked')}><span><strong>${p.days} dana</strong><b>${p.price} KM</b></span></label>`)}</div>
+    <p class="hint" style="margin:0;white-space:pre-wrap">${info.pay_info}</p>
+    <button class="btn accent big block">Pošalji zahtjev</button></form>`, (m, close) => {
+    m.querySelector('#ftF').onsubmit = async e => {
+      e.preventDefault();
+      const b = e.submitter; busy(b, true, 'Šaljem…');
+      try { await api('/api/featured/request', { body: { kind, id, days: e.target.days.value } }); close(); toast('Zahtjev poslan — javićemo ti se'); done?.(); } catch (err) { fail(err); busy(b, false); }
+    };
+  });
 }

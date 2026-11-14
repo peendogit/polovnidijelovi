@@ -46,6 +46,10 @@ export async function homePage({ el }) {
       ${d.vehicles.length ? html`<div class="vtiles">${d.vehicles.map(vehicleTile)}</div>`
         : html`<div class="empty"><strong>Još nema vozila</strong>Otpadi: objavite vozila koja rastavljate.<div style="margin-top:12px"><a class="btn dark" href="/objavi/vozilo">Objavi vozilo</a></div></div>`}
     </section>
+    ${d.featured?.length ? html`<section class="sec">
+      <div class="sec-h"><h2>${icon('star', 22, '#F5B301', 2)} Istaknuto</h2><a href="/dijelovi">Svi dijelovi</a></div>
+      <div class="list cols">${d.featured.map(p => partRow(p))}</div>
+    </section>` : ''}
     <section class="sec">
       <div class="sec-h"><h2>Novi dijelovi</h2><a href="/dijelovi">Svi</a></div>
       ${d.parts.length ? html`<div class="list cols">${d.parts.map(p => partRow(p))}</div>`

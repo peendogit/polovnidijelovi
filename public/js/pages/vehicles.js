@@ -1,6 +1,6 @@
 import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, getMeta } from '../core.js';
 import { vehicleUrl, canonical } from '../core.js';
-import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES, antiSpam, filterFields, bindFilters, hasFilters, crumbs, bindScrub } from '../components.js';
+import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES, antiSpam, filterFields, bindFilters, hasFilters, crumbs, bindScrub, featureBox, bindFeatureBox } from '../components.js';
 import { inquiryModal, share, reportModal } from './parts.js';
 
 // Vozila za dijelove — filter i lista (nacrt 5)
@@ -98,7 +98,7 @@ export async function vehiclePage({ el, params }) {
     </div>
     <div class="dg-col">
       <div class="det dg-side" id="pitaj">
-        <p style="margin:0 0 8px"><span class="badge ${v.status === 'active' ? 'dark' : ''}">${v.status === 'active' ? 'Rastavlja se' : v.status === 'done' ? 'Rastavljeno' : 'Skriveno'}</span></p>
+        <p style="margin:0 0 8px;display:flex;gap:6px">${v.featured ? html`<span class="feat-b">${icon('star', 12, '#1B1E22', 2.2)} Istaknuto</span>` : ''}<span class="badge ${v.status === 'active' ? 'dark' : ''}">${v.status === 'active' ? 'Rastavlja se' : v.status === 'done' ? 'Rastavljeno' : 'Skriveno'}</span></p>
         <h1>${name}</h1>
         <div class="veh">${[v.generation ? html`<a href="/vozila${qs({ make: v.make_id, gen: v.model_id })}">${v.make_name} ${v.generation}</a>` : '', [v.year, v.engine, v.fuel].filter(Boolean).join(' · ')].filter(Boolean).map((x, i) => html`${i ? html`<br>` : ''}${x}`)}</div>
         <div class="price-row">
@@ -114,6 +114,7 @@ export async function vehiclePage({ el, params }) {
       ${v.description ? html`<div class="det dg-desc"><h2 class="det-h">${icon('chat', 20)} Opis prodavca</h2><div class="desc">${v.description}</div></div>` : ''}
       ${v.mine ? html`<div class="det dg-own">
         <strong>${v.user_id === state.user?.id ? 'Tvoje vozilo' : 'Administrator — tuđe vozilo'}</strong> <span class="hint">· ${v.views} pregleda</span>
+        ${featureBox(v, 'vehicle')}
         <div class="btns" style="margin-top:10px">
           <a class="btn accent" href="/objavi/dio?vozilo=${v.id}">${icon('plus', 18)} Dodaj dio</a>
           <a class="btn dark" href="/uredi/vozilo/${v.id}">${icon('edit', 18, '#fff')} Uredi</a>
@@ -134,6 +135,7 @@ export async function vehiclePage({ el, params }) {
   ${v.same_model?.length ? html`<section class="sec"><div class="sec-h"><h2>Još ${v.make_name} ${v.generation || ''}</h2><a href="/vozila${qs({ make: v.make_id, gen: v.model_id })}">Sva</a></div>
     <div class="list">${v.same_model.map(x => vehicleRow(x))}</div></section>` : ''}`);
   bindGallery(el, v.images);
+  bindFeatureBox(el, () => vehiclePage({ el, params }));
   if (location.hash === '#pitaj' && !v.mine) setTimeout(() => inquiryModal({ vehicle_id: v.id }, `Zanima me dio sa vozila ${name} ${v.year || ''}: `), 50);
 
   $('#ask', el)?.addEventListener('click', () => inquiryModal({ vehicle_id: v.id }, `Zanima me dio sa vozila ${name} ${v.year || ''}: `));

@@ -5,7 +5,7 @@ import { COLORS, upper, gearsInt, gearboxKind, bodyKind, driveKind, bad, notFoun
 import { findType, typeById } from '../types.js';
 import { vehicleFilter, MODEL_JOIN, MODEL_COLS, sellerOf, fmtVehicleRow, pageArgs, countAndList } from './common.js';
 
-const COLS = `p.id, p.title, p.type_id, p.color, p.color_code, p.price, p.negotiable, p.condition, p.city, p.images, p.year, p.engine, p.fuel, p.side, p.part_no, p.status,
+const COLS = `p.id, (p.featured_until > datetime('now')) featured, p.title, p.type_id, p.color, p.color_code, p.price, p.negotiable, p.condition, p.city, p.images, p.year, p.engine, p.fuel, p.side, p.part_no, p.status,
   p.created_at, p.user_id, p.vehicle_id, p.make_id, p.model_id, p.model_text, u.name seller_name, u.type seller_type, u.verified seller_verified, ${MODEL_COLS}`;
 const FROM = `FROM parts p JOIN users u ON u.id=p.user_id AND u.blocked=0 ${MODEL_JOIN('p')}`;
 
@@ -38,7 +38,8 @@ export function listParts(q, extraWhere = [], extraArgs = []) {
   if (q.condition) { w.push('p.condition=?'); a.push(q.condition); }
   if (q.max) { w.push('p.price<=?'); a.push(num(q.max)); }
   if (q.images) w.push("p.images<>'[]'");
-  const order = q.sort === 'cijena' ? 'p.price IS NULL, p.price ASC' : q.sort === 'cijena-' ? 'p.price DESC' : 'p.id DESC';
+  if (q.featured) w.push("p.featured_until > datetime('now')");
+  const order = q.sort === 'cijena' ? 'p.price IS NULL, p.price ASC' : q.sort === 'cijena-' ? 'p.price DESC' : q.featured ? 'RANDOM()' : q.sort === 'novo' ? 'p.id DESC' : "(p.featured_until > datetime('now')) DESC, p.id DESC";
   const { limit, offset, page } = pageArgs(q);
   const r = countAndList(FROM, w, a, order, limit, offset, COLS);
   return { total: r.total, page, limit, items: r.items.map(fmtVehicleRow) };
@@ -57,6 +58,8 @@ app.get('/api/parts/:id', ({ params, user }) => {
   delete out.search;
   out.seller = seller;
   out.mine = !!mine;
+  out.featured = p.featured_until && get("SELECT ? > datetime('now') f", p.featured_until).f ? 1 : 0;
+  out.pending_feature = mine ? !!get("SELECT 1 x FROM featured_requests WHERE kind='part' AND item_id=? AND status='new'", p.id) : false;
   const va = p.vehicle_id ? get(`SELECT v.id, v.year, v.engine, v.images, v.model_text, ${MODEL_COLS} FROM vehicles v ${MODEL_JOIN('v')} WHERE v.id=? AND v.status<>'hidden'`, p.vehicle_id) : null;
   out.vehicle_ad = va ? { id: va.id, year: va.year, engine: va.engine, vehicle: fmtVehicleRow(va).vehicle } : null;
   out.fav = user ? !!get("SELECT 1 x FROM favorites WHERE user_id=? AND kind='part' AND item_id=?", user.id, p.id) : false;

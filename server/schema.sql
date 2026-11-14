@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
   gearbox TEXT,
   gearbox_code TEXT,
   gears INTEGER,
+  featured_until TEXT,
   drive TEXT,              -- prednji | zadnji | 4x4
   body TEXT,
   color TEXT,
@@ -99,6 +100,7 @@ CREATE TABLE IF NOT EXISTS parts (
   gears INTEGER,         -- 4–9
   body TEXT,
   drive TEXT,
+  featured_until TEXT,
   part_no TEXT,          -- kataloški / OEM broj
   side TEXT,             -- lijevo / desno / prednje / zadnje
   color TEXT,
@@ -226,4 +228,17 @@ CREATE TABLE IF NOT EXISTS part_types (
   title TEXT NOT NULL,
   grp TEXT,
   norm TEXT NOT NULL UNIQUE
+);
+
+-- istaknuti oglasi: zahtjevi (admin odobri kad stigne uplata)
+CREATE TABLE IF NOT EXISTS featured_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL,            -- part | vehicle
+  item_id INTEGER NOT NULL,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  days INTEGER NOT NULL,
+  price REAL,
+  status TEXT NOT NULL DEFAULT 'new',   -- new | done | rejected
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  done_at TEXT
 );

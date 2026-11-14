@@ -1,5 +1,5 @@
 import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy, partUrl, canonical, getTypes } from '../core.js';
-import { typeSuggest, matchTypes, icon, vehiclePicker, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, antiSpam, crumbs, filterFields, bindFilters, hasFilters } from '../components.js';
+import { typeSuggest, matchTypes, icon, vehiclePicker, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, antiSpam, crumbs, featureBox, bindFeatureBox, filterFields, bindFilters, hasFilters } from '../components.js';
 
 // Lista dijelova; /dijelovi?make=&model=&gen=&q=&city=&sort=
 export async function partsPage({ el, query, params }) {
@@ -84,6 +84,7 @@ export async function partPage({ el, params }) {
     <div class="dg-col">
       <div class="det dg-side">
         ${p.status !== 'active' ? html`<p style="margin:0 0 8px"><span class="badge ${p.status === 'sold' ? 'ok' : ''}">${p.status === 'sold' ? 'Prodato' : 'Skriveno'}</span></p>` : ''}
+        ${p.featured ? html`<span class="feat-b" style="margin-bottom:6px">${icon('star', 12, '#1B1E22', 2.2)} Istaknuto</span>` : ''}
         ${p.part_no ? html`<div class="sku">Kataloški broj: <strong>${p.part_no}</strong></div>` : ''}
         <h1>${p.title}</h1>
         <div class="veh">${p.generation ? html`<a href="/dijelovi${qs({ make: p.make_id, gen: p.model_id })}">${p.make_name} ${p.generation}</a>` : p.vehicle}</div>
@@ -101,6 +102,7 @@ export async function partPage({ el, params }) {
       ${p.description ? html`<div class="det dg-desc"><h2 class="det-h">${icon('chat', 20)} Opis prodavca</h2><div class="desc">${p.description}</div></div>` : ''}
       ${p.mine ? html`<div class="det dg-own">
         <strong>${p.user_id === state.user?.id ? 'Tvoj oglas' : 'Administrator — tuđi oglas'}</strong> <span class="hint">· ${p.views} pregleda</span>
+        ${featureBox(p, 'part')}
         <div class="btns" style="margin-top:10px">
           <a class="btn dark" href="/uredi/dio/${p.id}">${icon('edit', 18, '#fff')} Uredi</a>
           <button class="btn danger" id="del">Obriši</button>
@@ -114,6 +116,7 @@ export async function partPage({ el, params }) {
   ${p.similar?.length ? html`<section class="sec"><div class="sec-h"><h2>Još za ${p.make_name} ${p.generation || ''}</h2><a href="/dijelovi${qs({ make: p.make_id, gen: p.model_id })}">Svi</a></div>
     <div class="list cols">${p.similar.map(x => partRow(x))}</div></section>` : ''}`);
   bindGallery(el, p.images);
+  bindFeatureBox(el, () => partPage({ el, params }));
 
   $('#ask', el)?.addEventListener('click', () => inquiryModal({ part_id: p.id }, `Zanima me: ${p.title}${p.vehicle ? ' za ' + p.vehicle : ''}. Da li je još dostupno?`));
   $('#fav', el).onclick = async () => {

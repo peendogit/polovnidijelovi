@@ -5,7 +5,7 @@ import { COLORS, upper, gearsInt, bodyKind, driveKind, bad, notFound, str, int, 
 import { vehicleFilter, MODEL_JOIN, MODEL_COLS, sellerOf, fmtVehicleRow, pageArgs, countAndList } from './common.js';
 import { listParts, own } from './parts.js';
 
-const COLS = `v.id, v.year, v.fuel, v.engine, v.engine_code, v.power_kw, v.gearbox, v.gearbox_code, v.gears, v.drive, v.body, v.color, v.color_code, v.city, v.images, v.status, v.created_at, v.user_id,
+const COLS = `v.id, (v.featured_until > datetime('now')) featured, v.year, v.fuel, v.engine, v.engine_code, v.power_kw, v.gearbox, v.gearbox_code, v.gears, v.drive, v.body, v.color, v.color_code, v.city, v.images, v.status, v.created_at, v.user_id,
   v.make_id, v.model_id, v.model_text, v.mileage, u.name seller_name, u.type seller_type, u.verified seller_verified, u.phone seller_phone, ${MODEL_COLS},
   (SELECT COUNT(*) FROM parts p WHERE p.vehicle_id=v.id AND p.status='active') parts_count`;
 const FROM = `FROM vehicles v JOIN users u ON u.id=v.user_id AND u.blocked=0 ${MODEL_JOIN('v')}`;
@@ -27,7 +27,7 @@ export function listVehicles(q, extraW = [], extraA = []) {
   else if (q.gearbox === 'manuelni') w.push("v.gearbox LIKE 'manuelni%'");
   if (q.engine) { w.push('v.engine LIKE ?'); a.push(String(q.engine).slice(0, 4) + '%'); }
   for (const word of searchWords(q.q)) { w.push('v.search LIKE ?'); a.push(`%${word}%`); }
-  const order = q.sort === 'godiste' ? 'v.year DESC' : q.sort === 'godiste-' ? 'v.year ASC' : 'v.id DESC';
+  const order = q.sort === 'godiste' ? 'v.year DESC' : q.sort === 'godiste-' ? 'v.year ASC' : "(v.featured_until > datetime('now')) DESC, v.id DESC";
   const { limit, offset, page } = pageArgs(q);
   const r = countAndList(FROM, w, a, order, limit, offset, COLS);
   return { total: r.total, page, limit, items: r.items.map(fmtVehicleRow) };
@@ -45,6 +45,8 @@ app.get('/api/vehicles/:id', ({ params, user }) => {
   out.seller = sellerOf(v.user_id);
   if (!out.seller || (out.seller.blocked && !user?.is_admin)) throw notFound('Vozilo ne postoji ili je uklonjeno');
   out.mine = !!mine;
+  out.featured = v.featured_until && get("SELECT ? > datetime('now') f", v.featured_until).f ? 1 : 0;
+  out.pending_feature = mine ? !!get("SELECT 1 x FROM featured_requests WHERE kind='vehicle' AND item_id=? AND status='new'", v.id) : false;
   out.parts = listParts({ vehicle: v.id, limit: 60 }).items;
   out.fav = user ? !!get("SELECT 1 x FROM favorites WHERE user_id=? AND kind='vehicle' AND item_id=?", user.id, v.id) : false;
   out.same_model = v.model_id ? listVehicles({ gen: v.model_id, limit: 6 }, ['v.id<>?'], [v.id]).items : [];
@@ -109,7 +111,8 @@ app.get('/api/my/vehicles', ({ user, query }) => {
 
 // Početna: najnovije
 app.get('/api/home', () => ({
-  parts: listParts({ limit: 8 }).items,
+  parts: listParts({ limit: 8, sort: 'novo' }).items,
+  featured: listParts({ featured: 1, limit: 8 }).items,
   vehicles: listVehicles({ limit: 5 }).items,
   requests: all(`SELECT r.id, r.part, r.year, r.city, r.created_at, r.model_text, ${MODEL_COLS},
       (SELECT COUNT(*) FROM offers o WHERE o.request_id=r.id) offers
