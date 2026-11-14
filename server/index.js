@@ -44,6 +44,7 @@ const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inl
 function send(req, res, status, body, type = 'application/json; charset=utf-8', extra = {}) {
   let buf = Buffer.isBuffer(body) ? body : Buffer.from(typeof body === 'string' ? body : JSON.stringify(body));
   const headers = { 'Content-Type': type, 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'strict-origin-when-cross-origin', ...extra };
+  if (req.headers['x-forwarded-proto'] === 'https') headers['Strict-Transport-Security'] = 'max-age=15552000';
   if (type.startsWith('text/html')) headers['Content-Security-Policy'] = CSP;
   if (buf.length > 1024 && /json|text|javascript|xml|svg/.test(type) && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
     buf = zlib.gzipSync(buf);
@@ -55,7 +56,8 @@ function send(req, res, status, body, type = 'application/json; charset=utf-8', 
   res.end(req.method === 'HEAD' ? undefined : buf);
 }
 
-const safeHost = req => (/^[a-z0-9.-]+(:\d+)?$/i.test(req.headers.host || '') ? req.headers.host : 'polovnidijelovi.com');
+const SITE_HOST = (process.env.SITE_URL || 'https://polovnidijelovi.com').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+const safeHost = req => { const h = String(req.headers.host || '').toLowerCase(); return h === SITE_HOST || h === 'www.' + SITE_HOST || /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(h) ? h : SITE_HOST; };
 
 function readBody(req, limit) {
   return new Promise((resolve, reject) => {
@@ -79,7 +81,7 @@ function serveFile(req, res, file, cache) {
     if (/text|javascript|json|svg|xml/.test(type)) {
       return send(req, res, 200, fs.readFileSync(file), type, { 'Cache-Control': cache, ETag: etag });
     }
-    res.writeHead(200, { 'Content-Type': type, 'Content-Length': st.size, 'Cache-Control': cache, ETag: etag });
+    res.writeHead(200, { 'Content-Type': type, 'Content-Length': st.size, 'Cache-Control': cache, ETag: etag, 'X-Content-Type-Options': 'nosniff' });
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(file).pipe(res);
   });
@@ -97,6 +99,14 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith('/api/')) {
       const m = routes.match(req.method, p);
       if (!m) throw new HttpError(404, 'Nepoznata adresa');
+      // izmjene smiju doći samo sa našeg sajta (tuđa stranica ne može u ime prijavljenog korisnika kliknuti "Obriši" i sl.)
+      if (req.method !== 'GET' && req.method !== 'HEAD' && !p.startsWith('/api/feed/')) {
+        const origin = req.headers.origin || req.headers.referer || '';
+        if (origin) {
+          let oh = ''; try { oh = new URL(origin).host.toLowerCase(); } catch { /* neispravno */ }
+          if (oh !== String(req.headers.host || '').toLowerCase()) throw new HttpError(403, 'Zahtjev nije sa ovog sajta');
+        }
+      }
       const cookies = parseCookies(req.headers.cookie);
       const user = userFromToken(cookies.pd_s);
       if (m.route.auth && !user) throw new HttpError(401, 'Prijavi se');
@@ -111,6 +121,8 @@ const server = http.createServer(async (req, res) => {
         if (raw.length) {
           if (!/application\/json/.test(req.headers['content-type'] || '')) throw new HttpError(415, 'Očekujem JSON');
           try { body = JSON.parse(raw.toString('utf8')); } catch { throw new HttpError(400, 'Neispravan JSON'); }
+          // samo običan objekat (ne null, niz, broj…) — inače bi rute pucale
+          if (!body || typeof body !== 'object' || Array.isArray(body)) throw new HttpError(400, 'Neispravan JSON');
         }
       }
       const secure = req.headers['x-forwarded-proto'] === 'https';
@@ -138,7 +150,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ---------- sve ostalo: aplikacija (index.html sa SEO podacima) ----------
-    const html = renderIndex(p, req.headers.host, url.searchParams);
+    const html = renderIndex(p, safeHost(req), url.searchParams);
     return send(req, res, html.status || 200, html.body, TYPES['.html'], { 'Cache-Control': 'no-cache' });
   } catch (e) {
     const status = e.status || 500;

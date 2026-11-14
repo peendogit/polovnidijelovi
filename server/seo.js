@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { all, get } from './db.js';
 import { app } from './router.js';
-import { parseImgs, vehicleName, normalize } from './lib.js';
+import { parseImgs, vehicleName, normalize, PUBLIC_SELLER } from './lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const INDEX = path.join(ROOT, 'public/index.html');
@@ -37,7 +37,7 @@ function meta(p) {
   let m;
   if ((m = p.match(/^\/dio\/(\d+)/))) {
     const r = get(`SELECT p.id, p.title, p.part_no, p.condition, p.description, p.price, p.city, p.images, p.year, p.status, k.name make_name, mo.name model_name, mo.generation_name, mo.restyling, mo.restyling_second, p.model_text
-      FROM parts p LEFT JOIN car_make k ON k.id=p.make_id LEFT JOIN car_model mo ON mo.id=p.model_id WHERE p.id=?`, Number(m[1]));
+      FROM parts p LEFT JOIN car_make k ON k.id=p.make_id LEFT JOIN car_model mo ON mo.id=p.model_id WHERE p.id=? AND p.user_id IN (SELECT id FROM users WHERE blocked=0)`, Number(m[1]));
     if (!r || r.status === 'hidden') return { status: 404, title: 'Oglas ne postoji' };
     const v = vehicleName(r);
     return {
@@ -55,7 +55,7 @@ function meta(p) {
   }
   if ((m = p.match(/^\/vozilo\/(\d+)/))) {
     const r = get(`SELECT v.id, v.year, v.engine, v.city, v.images, v.status, k.name make_name, mo.name model_name, mo.generation_name, mo.restyling, mo.restyling_second, v.model_text
-      FROM vehicles v LEFT JOIN car_make k ON k.id=v.make_id LEFT JOIN car_model mo ON mo.id=v.model_id WHERE v.id=?`, Number(m[1]));
+      FROM vehicles v LEFT JOIN car_make k ON k.id=v.make_id LEFT JOIN car_model mo ON mo.id=v.model_id WHERE v.id=? AND v.user_id IN (SELECT id FROM users WHERE blocked=0)`, Number(m[1]));
     if (!r || r.status === 'hidden') return { status: 404, title: 'Vozilo ne postoji' };
     const v = vehicleName(r);
     return {
@@ -66,7 +66,7 @@ function meta(p) {
     };
   }
   if ((m = p.match(/^\/prodavac\/(\d+)/))) {
-    const u = get("SELECT name, city, about, logo FROM users WHERE id=? AND blocked=0", Number(m[1]));
+    const u = get(`SELECT name, city, about, logo FROM users u WHERE id=? AND blocked=0 AND ${PUBLIC_SELLER}`, Number(m[1]));
     if (!u) return { status: 404, title: 'Prodavac ne postoji' };
     return { title: `${u.name}${u.city ? ' — ' + u.city : ''} | polovni dijelovi`, desc: u.about || `Polovni dijelovi i vozila za dijelove: ${u.name}.`, img: u.logo };
   }

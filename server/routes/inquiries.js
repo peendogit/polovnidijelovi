@@ -1,7 +1,7 @@
 // Upiti: "Pitaj za dio" (vozilo / dio / prodavac) i "Pitaj sve otpade" za jedan model
 import { app } from '../router.js';
 import { all, get, run, tx } from '../db.js';
-import { bad, notFound, str, int, rateLimit, vehicleName } from '../lib.js';
+import { bad, notFound, str, int, rateLimit, vehicleName, PUBLIC_SELLER } from '../lib.js';
 import { MODEL_JOIN, MODEL_COLS } from './common.js';
 
 // ---------- zaštita od spama ----------
@@ -59,7 +59,7 @@ app.post('/api/inquiries', ({ user, body, ip }) => {
     if (!p) throw notFound('Oglas ne postoji');
     to = p.user_id; part_id = p.id;
   } else if (body.to) {
-    const u = get('SELECT id FROM users WHERE id=? AND blocked=0', int(body.to));
+    const u = get(`SELECT id FROM users u WHERE id=? AND blocked=0 AND ${PUBLIC_SELLER}`, int(body.to));
     if (!u) throw notFound('Prodavac ne postoji');
     to = u.id;
   } else throw bad('Kome šalješ upit?');
@@ -121,7 +121,8 @@ app.post('/api/my/inquiries/:id/spam', ({ user, params }) => {
   const np = i.phone_norm || normPhone(i.phone);
   // isti broj, isti prodavac: sakrij i ostale upite
   run('UPDATE inquiries SET spam=1, seen=1 WHERE to_user_id=? AND phone_norm=?', user.id, np);
-  const reporters = get("SELECT COUNT(DISTINCT to_user_id) c FROM inquiries WHERE phone_norm=? AND spam=1 AND created_at > datetime('now','-60 days')", np).c;
+  const reporters = get(`SELECT COUNT(DISTINCT i.to_user_id) c FROM inquiries i JOIN users u ON u.id=i.to_user_id
+    WHERE i.phone_norm=? AND i.spam=1 AND i.created_at > datetime('now','-60 days') AND u.created_at < datetime('now','-3 days')`, np).c; // novi nalozi se ne broje (da se tuđi broj ne može blokirati lažnim nalozima)
   let blocked = false;
   if (reporters >= SPAM_REPORTS_TO_BLOCK || user.is_admin) {
     run("INSERT OR IGNORE INTO blocklist (value, kind, reason) VALUES (?, 'phone', ?)", np, `spam — prijavilo ${reporters} prodavaca`);

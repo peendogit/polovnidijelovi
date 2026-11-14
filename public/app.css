@@ -447,3 +447,11 @@ details summary{cursor:pointer}
 .priv-sum{padding:10px 12px}
 .ps-line{display:flex;align-items:center;gap:8px;font-size:14px}
 .ps-line span{flex:1;min-width:0}
+
+/* slike se nikad ne razvlače: kutija ima fiksan omjer, slika se uklapa unutra (uspravne slike ne mijenjaju visinu) */
+.vcard .ph,.vtile .ph{position:relative;overflow:hidden;min-height:0;height:auto}
+.vcard .ph img,.vtile .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;max-width:none}
+.thumb,.thumb-wrap{overflow:hidden}
+img.thumb{object-fit:cover}
+.gallery .strip img{max-height:none;object-fit:contain}
+.imgs .im img{position:absolute;inset:0}

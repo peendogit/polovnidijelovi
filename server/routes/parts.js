@@ -55,7 +55,7 @@ app.get('/api/parts/:id', ({ params, user }) => {
   const seller = sellerOf(p.user_id);
   if (!seller || (seller.blocked && !user?.is_admin)) throw notFound('Oglas ne postoji ili je uklonjen');
   const out = fmtVehicleRow(p);
-  delete out.search;
+  delete out.search; delete out.ext_id; if (!mine) delete out.views;
   out.seller = seller;
   out.mine = !!mine;
   out.featured = p.featured_until && get("SELECT ? > datetime('now') f", p.featured_until).f ? 1 : 0;
@@ -147,8 +147,10 @@ app.get('/api/my/parts', ({ user, query }) => {
 }, { auth: true });
 
 app.post('/api/favorites', ({ user, body }) => {
+  rateLimit('fav:' + user.id, 300, 3600e3);
   const kind = body.kind === 'vehicle' ? 'vehicle' : 'part';
   const id = int(body.id);
+  if (!id || !get(`SELECT 1 x FROM ${kind === 'vehicle' ? 'vehicles' : 'parts'} WHERE id=? AND status<>'hidden'`, id)) throw notFound('Oglas ne postoji');
   if (get('SELECT 1 x FROM favorites WHERE user_id=? AND kind=? AND item_id=?', user.id, kind, id)) {
     run('DELETE FROM favorites WHERE user_id=? AND kind=? AND item_id=?', user.id, kind, id);
     return { fav: false };
@@ -158,10 +160,10 @@ app.post('/api/favorites', ({ user, body }) => {
 }, { auth: true });
 
 app.get('/api/favorites', ({ user }) => {
-  const ids = all("SELECT item_id FROM favorites WHERE user_id=? AND kind='part' ORDER BY created_at DESC", user.id).map(r => r.item_id);
-  const vids = all("SELECT item_id FROM favorites WHERE user_id=? AND kind='vehicle' ORDER BY created_at DESC", user.id).map(r => r.item_id);
-  const parts = ids.length ? all(`SELECT ${COLS} ${FROM} WHERE p.id IN (${ids.map(() => '?').join(',')})`, ...ids).map(fmtVehicleRow) : [];
-  const vehicles = vids.length ? all(`SELECT v.*, u.name seller_name, ${MODEL_COLS} FROM vehicles v JOIN users u ON u.id=v.user_id ${MODEL_JOIN('v')} WHERE v.id IN (${vids.map(() => '?').join(',')})`, ...vids).map(fmtVehicleRow) : [];
+  const ids = all("SELECT item_id FROM favorites WHERE user_id=? AND kind='part' ORDER BY created_at DESC LIMIT 300", user.id).map(r => r.item_id);
+  const vids = all("SELECT item_id FROM favorites WHERE user_id=? AND kind='vehicle' ORDER BY created_at DESC LIMIT 300", user.id).map(r => r.item_id);
+  const parts = ids.length ? all(`SELECT ${COLS} ${FROM} WHERE p.status<>'hidden' AND p.id IN (${ids.map(() => '?').join(',')})`, ...ids).map(fmtVehicleRow) : [];
+  const vehicles = vids.length ? all(`SELECT v.*, u.name seller_name, ${MODEL_COLS} FROM vehicles v JOIN users u ON u.id=v.user_id AND u.blocked=0 ${MODEL_JOIN('v')} WHERE v.status<>'hidden' AND v.id IN (${vids.map(() => '?').join(',')})`, ...vids).map(r => { const o = fmtVehicleRow(r); delete o.search; delete o.ext_id; return o; }) : [];
   return { parts, vehicles };
 }, { auth: true });
 

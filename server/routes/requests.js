@@ -119,7 +119,10 @@ app.post('/api/requests/:id/offer', ({ user, params, body }) => {
   if (!r) throw notFound();
   if (r.status !== 'open') throw bad('Zahtjev je zatvoren');
   if (r.user_id === user.id) throw bad('Ne možeš ponuditi na svoj zahtjev');
+  if (r.visibility !== 'public' && !isTrade(user)) throw forbidden('Na ovaj zahtjev mogu odgovoriti samo otpadi');
+  if (get('SELECT blocked FROM users WHERE id=?', r.user_id)?.blocked) throw notFound();
   const price = num(body.price);
+  if (price !== null && (price < 0 || price > 1e6)) throw bad('Provjeri cijenu');
   const message = str(body.message, 1000);
   if (price === null && !message) throw bad('Upiši cijenu ili poruku');
   let part_id = int(body.part_id);

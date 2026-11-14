@@ -16,7 +16,7 @@ export const routes = {
     for (const r of list) {
       if (r.method !== method && !(method === 'HEAD' && r.method === 'GET')) continue;
       const m = pathname.match(r.re);
-      if (m) return { route: r, params: Object.fromEntries(r.keys.map((k, i) => [k, decodeURIComponent(m[i + 1])])) };
+      if (m) return { route: r, params: Object.fromEntries(r.keys.map((k, i) => [k, m[i + 1]])) };
     }
     return null;
   },

@@ -42,7 +42,7 @@ app.get('/api/vehicles/:id', ({ params, user }) => {
   if (!v || (v.status === 'hidden' && !mine)) throw notFound('Vozilo ne postoji ili je uklonjeno');
   if (!mine) run('UPDATE vehicles SET views=views+1 WHERE id=?', v.id);
   const out = fmtVehicleRow(v);
-  delete out.search;
+  delete out.search; delete out.ext_id; if (!mine) delete out.views;
   out.seller = sellerOf(v.user_id);
   if (!out.seller || (out.seller.blocked && !user?.is_admin)) throw notFound('Vozilo ne postoji ili je uklonjeno');
   out.mine = !!mine;

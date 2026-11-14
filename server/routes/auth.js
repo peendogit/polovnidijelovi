@@ -41,6 +41,7 @@ function sendVerify(u) {
     `Zdravo ${u.name}, klikni dugme ispod da potvrdiš email. Nakon toga možeš objavljivati oglase.`, 'Potvrdi email', `${SITE_URL}/potvrdi/${t}`);
 }
 
+const DUMMY_HASH = hashPassword(crypto.randomBytes(12).toString('hex'));
 const cleanPhone = p => (str(p, 30) || '').replace(/[^\d+]/g, '');
 
 app.post('/api/auth/register', (ctx) => {
@@ -74,9 +75,12 @@ app.post('/api/auth/login', (ctx) => {
   const { body, ip, secure } = ctx;
   rateLimit('login:' + ip, 10, 15 * 60e3);
   const email = str(body.email, 120)?.toLowerCase();
+  if (!email || typeof body.password !== 'string' || !body.password) throw bad('Upiši email i lozinku');
   rateLimit('login-acc:' + email, 15, 30 * 60e3); // i po nalogu, da se lozinka ne pogađa sa više adresa
   const u = get('SELECT * FROM users WHERE email=?', email);
-  if (!u || !checkPassword(body.password || '', u.pass_hash)) throw bad('Pogrešan email ili lozinka');
+  // i kad nalog ne postoji provjera traje isto (da se po brzini odgovora ne vidi ko je registrovan)
+  const okPw = checkPassword(body.password.slice(0, 200), u ? u.pass_hash : DUMMY_HASH);
+  if (!u || !okPw) throw bad('Pogrešan email ili lozinka');
   if (u.blocked) throw bad('Nalog je blokiran');
   run("UPDATE users SET last_login=datetime('now') WHERE id=?", u.id);
   ctx.setCookie = sessionCookie(makeToken(u), secure);
@@ -174,6 +178,7 @@ app.post('/api/me/password', (ctx) => {
   rateLimit('pw:' + user.id, 8, 15 * 60e3);
   if (!checkPassword(body.old || '', user.pass_hash)) throw bad('Stara lozinka nije tačna');
   if (!body.password || String(body.password).length < 6) throw bad('Nova lozinka mora imati bar 6 znakova');
+  if (String(body.password).length > 200) throw bad('Lozinka je preduga');
   run('UPDATE users SET pass_hash=? WHERE id=?', hashPassword(body.password), user.id);
   // stare prijave (drugi uređaji) prestaju važiti; ovaj uređaj dobija novu
   ctx.setCookie = sessionCookie(makeToken(get('SELECT * FROM users WHERE id=?', user.id)), ctx.secure);

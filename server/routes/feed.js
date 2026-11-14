@@ -87,8 +87,9 @@ app.post('/api/feed/vehicles', ({ req, body }) => {
   let ok = 0; const errors = [];
   tx(() => {
     for (const it of items) {
+      if (!it || typeof it !== 'object') continue;
       const ext = str(it.ext_id, 60);
-      if (!ext) { errors.push({ it, error: 'nema ext_id' }); continue; }
+      if (!ext) { errors.push({ error: 'nema ext_id' }); continue; }
       const m = resolveModel(it);
       const d = {
         make_id: m?.make_id || null, model_id: m?.id || null, model_text: m?.id ? null : str(m?.name || it.model || it.make, 80),
@@ -109,6 +110,7 @@ app.post('/api/feed/parts', ({ req, body }) => {
   let ok = 0; const errors = [];
   tx(() => {
     for (const it of items) {
+      if (!it || typeof it !== 'object') continue;
       const ext = str(it.ext_id, 60), title = str(it.title, 120);
       if (!ext || !title) { errors.push({ ext_id: ext, error: 'nema ext_id ili naziva' }); continue; }
       const m = resolveModel(it);

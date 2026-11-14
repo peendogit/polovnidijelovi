@@ -60,11 +60,13 @@ export function userFromToken(tok) {
 export function sessionCookie(token, secure) {
   return `pd_s=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${token ? DAYS * 86400 : 0}${secure ? '; Secure' : ''}`;
 }
+// Ko ima javni profil: otpadi i svi koji imaju bar jedan vidljiv oglas. Kupci koji samo traže dio nemaju (broj im ostaje privatan).
+export const PUBLIC_SELLER = `(u.type='otpad' OR EXISTS (SELECT 1 FROM parts pp WHERE pp.user_id=u.id AND pp.status<>'hidden') OR EXISTS (SELECT 1 FROM vehicles vv WHERE vv.user_id=u.id AND vv.status<>'hidden'))`;
 export function parseCookies(h = '') {
   const o = {};
   for (const p of h.split(';')) {
     const i = p.indexOf('=');
-    if (i > 0) o[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1).trim());
+    if (i > 0) { try { o[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1).trim()); } catch { /* neispravan kolačić */ } }
   }
   return o;
 }
