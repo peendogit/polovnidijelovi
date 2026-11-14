@@ -244,3 +244,16 @@ CREATE TABLE IF NOT EXISTS featured_requests (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   done_at TEXT
 );
+
+-- pretrage dijelova (za analitiku: šta se najviše traži, šta nije nađeno)
+CREATE TABLE IF NOT EXISTS search_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  term TEXT,              -- normalizovan tekst pretrage
+  type_id INTEGER,        -- tip dijela (ako je izabran ili prepoznat)
+  make_id TEXT,
+  model TEXT,
+  results INTEGER,
+  who TEXT,               -- skraćeni otisak IP-a (ne čuva se sama adresa)
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_search_time ON search_log(created_at);

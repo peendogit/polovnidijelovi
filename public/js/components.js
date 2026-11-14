@@ -55,7 +55,7 @@ export function partRow(p, opts = {}) {
       ${p.featured ? html`<span class="feat-b">${icon('star', 12, '#1B1E22', 2.2)} Istaknuto</span>` : ''}
       <span class="t">${p.title}${st}</span>
       <span class="s">${[p.vehicle || p.model_text, p.year].filter(Boolean).join(' · ')}</span>
-      <span class="s">${[p.seller_name && !opts.noSeller ? p.seller_name : null, p.city].filter(Boolean).join(' · ')}${opts.views ? ` · ${p.views} pregleda` : ''}</span>
+      <span class="s">${[p.seller_name && !opts.noSeller ? p.seller_name : null, p.city].filter(Boolean).join(' · ')}${opts.views && p.views != null ? ` · ${p.views} pregleda` : ''}</span>
       <span class="p">${km(p.price)}</span>
     </div>
   </a>`;

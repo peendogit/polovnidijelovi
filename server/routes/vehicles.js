@@ -42,7 +42,7 @@ app.get('/api/vehicles/:id', ({ params, user }) => {
   if (!v || (v.status === 'hidden' && !mine)) throw notFound('Vozilo ne postoji ili je uklonjeno');
   if (!mine) run('UPDATE vehicles SET views=views+1 WHERE id=?', v.id);
   const out = fmtVehicleRow(v);
-  delete out.search; delete out.ext_id; if (!mine) delete out.views;
+  delete out.search; delete out.ext_id; if (!user?.is_admin) delete out.views;
   out.seller = sellerOf(v.user_id);
   if (!out.seller || (out.seller.blocked && !user?.is_admin)) throw notFound('Vozilo ne postoji ili je uklonjeno');
   out.mine = !!mine;
@@ -106,7 +106,7 @@ app.get('/api/my/vehicles', ({ user, query }) => {
   const w = ['v.user_id=?']; const a = [user.id];
   if (query.status) { w.push('v.status=?'); a.push(query.status); }
   const { limit, offset, page } = pageArgs(query, 60);
-  const r = countAndList(`FROM vehicles v JOIN users u ON u.id=v.user_id ${MODEL_JOIN('v')}`, w, a, 'v.id DESC', limit, offset, COLS + ', v.views');
+  const r = countAndList(`FROM vehicles v JOIN users u ON u.id=v.user_id ${MODEL_JOIN('v')}`, w, a, 'v.id DESC', limit, offset, COLS + (user.is_admin ? ', v.views' : ''));
   return { total: r.total, page, limit, items: r.items.map(fmtVehicleRow) };
 }, { auth: true });
 

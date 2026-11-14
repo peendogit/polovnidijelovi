@@ -179,3 +179,4 @@ const cleanRequests = () => {
 };
 cleanRequests();
 setInterval(cleanRequests, 3600e3).unref();
+setInterval(() => { try { run("DELETE FROM search_log WHERE created_at < datetime('now','-90 days')"); } catch { /* */ } }, 24 * 3600e3).unref();

@@ -1,17 +1,17 @@
-import { html, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, getMakes } from '../core.js';
+import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, getMakes } from '../core.js';
 import { confirmBox, modal, fmtDate } from '../components.js';
 
 export async function adminPage({ el, params }) {
   if (!state.user?.is_admin) return go('/', true);
   setTitle('Administracija');
   const tab = params.tab || 'pregled';
-  const tabs = [['pregled', 'Pregled'], ['korisnici', 'Korisnici'], ['modeli', 'Modeli'], ['istaknuto', 'Istaknuto'], ['prijave', 'Prijave'], ['spam', 'Spam']];
+  const tabs = [['pregled', 'Pregled'], ['trazeno', 'Najtraženije'], ['korisnici', 'Korisnici'], ['modeli', 'Modeli'], ['istaknuto', 'Istaknuto'], ['prijave', 'Prijave'], ['spam', 'Spam']];
   render(el, html`
   <section class="page-head" style="padding-bottom:8px"><div class="row"><h1 style="padding-left:12px">Administracija</h1></div></section>
   <nav class="tabs">${tabs.map(t => html`<a href="/admin/${t[0]}" class="${t[0] === tab ? 'on' : ''}">${t[1]}</a>`)}</nav>
   <div class="wrap" style="padding-top:14px" id="at"></div>`);
   const box = $('#at', el);
-  await ({ pregled: overview, korisnici: users, modeli: models, istaknuto: featured, prijave: reports, spam }[tab] || overview)(box);
+  await ({ pregled: overview, trazeno: demand, korisnici: users, modeli: models, istaknuto: featured, prijave: reports, spam }[tab] || overview)(box);
 }
 
 async function overview(box) {
@@ -176,4 +176,40 @@ async function featured(box) {
     const list = [0, 1, 2, 3].map(i => ({ days: f['d' + i], price: f['p' + i] })).filter(p => p.days && p.price !== '');
     try { await api('/api/admin/featured-settings', { body: { prices: list, pay_info: f.pay_info } }); toast('Sačuvano'); featured(box); } catch (err) { fail(err); }
   };
+}
+
+// ---------- najtraženiji dijelovi ----------
+async function demand(box, days = 30) {
+  const d = await api('/api/admin/demand?days=' + days);
+  const bar = (n, max) => html`<span class="dm-bar"><i style="width:${Math.max(4, Math.round(n / (max || 1) * 100))}%"></i></span>`;
+  const list = (rows, label, extra) => {
+    if (!rows.length) return html`<div class="empty" style="padding:16px">Još nema podataka.</div>`;
+    const max = rows[0].n;
+    return html`<div class="list">${rows.map((r, i) => html`<div class="row-item dm-row"><span class="dm-n">${i + 1}</span>
+      <div class="info"><span class="t">${label(r)}</span>${bar(r.n, max)}</div>
+      <div class="dm-c"><strong>${r.n}×</strong>${extra ? extra(r) : ''}</div></div>`)}</div>`;
+  };
+  const none = r => (r.none ? html`<small class="dm-none">${r.none} bez rezultata</small>` : '');
+  const veh = r => [r.make_name, r.model].filter(Boolean).join(' ');
+  render(box, html`
+    <div class="seg light" style="max-width:420px;margin-bottom:14px">${[7, 30, 90].map(n => html`<a href="#" data-days="${n}" class="${n === d.days ? 'on' : ''}">${n} dana</a>`)}</div>
+    <div class="stats" style="margin-bottom:14px"><div class="stat"><b>${d.searches}</b><span>Pretraga dijelova</span></div>
+      <div class="stat"><b>${d.missing.reduce((a, r) => a + r.n, 0)}</b><span>Bez rezultata</span></div>
+      <div class="stat"><b>${d.requests.reduce((a, r) => a + r.n, 0)}</b><span>„Tražim dio“ zahtjeva</span></div></div>
+    <h2 class="dm-h">Najtraženiji dijelovi</h2>
+    ${list(d.types, r => r.title, none)}
+    <h2 class="dm-h">Traženo, a nema na sajtu</h2><p class="hint" style="margin:-4px 0 8px">Ovo kupci traže, a niko nema — vrijedi nabaviti ili objaviti.</p>
+    ${list(d.missing, r => [r.term || '(bez teksta)', veh(r)].filter(Boolean).join(' — '))}
+    <h2 class="dm-h">Najtraženija vozila</h2>
+    ${list(d.models, veh)}
+    <h2 class="dm-h">Šta kupci pišu u „Tražim dio“</h2>
+    ${list(d.requests, r => [r.part, veh(r)].filter(Boolean).join(' — '))}
+    <h2 class="dm-h">Tačan tekst pretrage</h2>
+    ${list(d.terms, r => r.term, none)}
+    <h2 class="dm-h">Najgledaniji oglasi</h2>
+    ${d.viewed.length ? html`<div class="list">${d.viewed.map((p, i) => html`<a class="row-item dm-row" href="/dio/${p.id}"><span class="dm-n">${i + 1}</span>
+      <div class="info"><span class="t">${p.title}</span><span class="s">${[p.make_name, p.model_name || p.model_text].filter(Boolean).join(' ')}</span></div>
+      <div class="dm-c"><strong>${p.views}</strong><small>pregleda</small></div></a>`)}</div>` : html`<div class="empty" style="padding:16px">Još nema podataka.</div>`}
+    <p class="hint">Broje se pretrage posjetilaca (ne tvoje kao admina); ista pretraga istog posjetioca u 30 min broji se jednom. Podaci se čuvaju 90 dana.</p>`);
+  $$('[data-days]', box).forEach(a => { a.onclick = e => { e.preventDefault(); demand(box, Number(a.dataset.days)); }; });
 }

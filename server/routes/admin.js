@@ -131,3 +131,31 @@ app.del('/api/admin/blocklist/:value', ({ params }) => {
   run('DELETE FROM blocklist WHERE value=?', params.value);
   return { ok: true };
 }, A);
+
+// ---------- najtraženiji dijelovi ----------
+app.get('/api/admin/demand', ({ query }) => {
+  const days = [7, 30, 90].includes(int(query.days)) ? int(query.days) : 30;
+  const since = `-${days} days`;
+  return {
+    days,
+    searches: get("SELECT COUNT(*) c FROM search_log WHERE created_at > datetime('now', ?)", since).c,
+    // tipovi dijelova koje ljudi najviše traže
+    types: all(`SELECT t.title, COUNT(*) n, SUM(s.results=0) none FROM search_log s JOIN part_types t ON t.id=s.type_id
+      WHERE s.created_at > datetime('now', ?) GROUP BY s.type_id ORDER BY n DESC LIMIT 30`, since),
+    // tekst pretrage
+    terms: all(`SELECT term, COUNT(*) n, SUM(results=0) none FROM search_log WHERE term IS NOT NULL AND created_at > datetime('now', ?)
+      GROUP BY term ORDER BY n DESC LIMIT 30`, since),
+    // traženo a nije nađeno — šta vrijedi nabaviti
+    missing: all(`SELECT s.term, k.name make_name, s.model, COUNT(*) n FROM search_log s LEFT JOIN car_make k ON k.id=s.make_id
+      WHERE s.results=0 AND s.created_at > datetime('now', ?) GROUP BY s.term, s.make_id, s.model ORDER BY n DESC LIMIT 30`, since),
+    // marke i modeli uz pretragu
+    models: all(`SELECT k.name make_name, s.model, COUNT(*) n FROM search_log s JOIN car_make k ON k.id=s.make_id
+      WHERE s.created_at > datetime('now', ?) GROUP BY s.make_id, s.model ORDER BY n DESC LIMIT 20`, since),
+    // "Tražim dio" — šta kupci traže
+    requests: all(`SELECT r.part, k.name make_name, COALESCE(mo.name, r.model_text) model, COUNT(*) n FROM requests r LEFT JOIN car_make k ON k.id=r.make_id
+      LEFT JOIN car_model mo ON mo.id=r.model_id WHERE r.created_at > datetime('now', ?) GROUP BY lower(r.part), r.make_id, model ORDER BY n DESC, r.id DESC LIMIT 20`, since),
+    // najgledaniji oglasi
+    viewed: all(`SELECT p.id, p.title, p.views, k.name make_name, mo.name model_name, p.model_text FROM parts p LEFT JOIN car_make k ON k.id=p.make_id
+      LEFT JOIN car_model mo ON mo.id=p.model_id WHERE p.status='active' AND p.views>0 ORDER BY p.views DESC LIMIT 15`),
+  };
+}, A);

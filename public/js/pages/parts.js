@@ -101,7 +101,7 @@ export async function partPage({ el, params }) {
       </div>
       ${p.description ? html`<div class="det dg-desc"><h2 class="det-h">${icon('chat', 20)} Opis prodavca</h2><div class="desc">${p.description}</div></div>` : ''}
       ${p.mine ? html`<div class="det dg-own">
-        <strong>${p.user_id === state.user?.id ? 'Tvoj oglas' : 'Administrator — tuđi oglas'}</strong> <span class="hint">· ${p.views} pregleda</span>
+        <strong>${p.user_id === state.user?.id ? 'Tvoj oglas' : 'Administrator — tuđi oglas'}</strong> ${p.views != null ? html`<span class="hint">· ${p.views} pregleda</span>` : ''}
         ${featureBox(p, 'part')}
         <div class="btns" style="margin-top:10px">
           <a class="btn dark" href="/uredi/dio/${p.id}">${icon('edit', 18, '#fff')} Uredi</a>

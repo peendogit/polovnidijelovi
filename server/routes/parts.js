@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 // Oglasi za dijelove
 import { app } from '../router.js';
 import { all, get, run } from '../db.js';
@@ -45,7 +46,23 @@ export function listParts(q, extraWhere = [], extraArgs = []) {
   return { total: r.total, page, limit, items: r.items.map(fmtVehicleRow) };
 }
 
-app.get('/api/parts', ({ query }) => listParts(query));
+app.get('/api/parts', ({ query, ip, user }) => {
+  const r = listParts(query);
+  // analitika: prva stranica pretrage sa tekstom ili tipom dijela (admin se ne broji)
+  if ((query.q || query.type) && !(parseInt(query.page, 10) > 1) && !user?.is_admin) {
+    try {
+      const term = normalize(query.q).slice(0, 80) || null;
+      const type = int(query.type) ? typeById(int(query.type)) : (query.q ? findType(query.q) : null);
+      const who = crypto.createHash('sha256').update(String(ip) + SALT).digest('hex').slice(0, 16);
+      // isti posjetilac, ista pretraga u 30 min = jedna pretraga
+      if (!get("SELECT 1 x FROM search_log WHERE who=? AND COALESCE(term,'')=COALESCE(?,'') AND COALESCE(make_id,'')=COALESCE(?,'') AND created_at > datetime('now','-30 minutes')", who, term, query.make || null)) {
+        run('INSERT INTO search_log (term, type_id, make_id, model, results, who) VALUES (?,?,?,?,?,?)', term, type?.id || null, str(query.make, 60), str(query.model, 80), r.total, who);
+      }
+    } catch (e) { console.error('search_log', e.message); }
+  }
+  return r;
+});
+const SALT = crypto.randomBytes(8).toString('hex');
 
 app.get('/api/parts/:id', ({ params, user }) => {
   const p = get(`SELECT p.*, ${MODEL_COLS} FROM parts p ${MODEL_JOIN('p')} WHERE p.id=?`, int(params.id));
@@ -55,7 +72,7 @@ app.get('/api/parts/:id', ({ params, user }) => {
   const seller = sellerOf(p.user_id);
   if (!seller || (seller.blocked && !user?.is_admin)) throw notFound('Oglas ne postoji ili je uklonjen');
   const out = fmtVehicleRow(p);
-  delete out.search; delete out.ext_id; if (!mine) delete out.views;
+  delete out.search; delete out.ext_id; if (!user?.is_admin) delete out.views;
   out.seller = seller;
   out.mine = !!mine;
   out.featured = p.featured_until && get("SELECT ? > datetime('now') f", p.featured_until).f ? 1 : 0;
@@ -142,7 +159,7 @@ app.get('/api/my/parts', ({ user, query }) => {
   if (query.status) { w.push('p.status=?'); a.push(query.status); }
   for (const word of searchWords(query.q)) { w.push('p.search LIKE ?'); a.push(`%${word}%`); }
   const { limit, offset, page } = pageArgs(query, 30);
-  const r = countAndList(`FROM parts p JOIN users u ON u.id=p.user_id ${MODEL_JOIN('p')}`, w, a, 'p.id DESC', limit, offset, COLS + ', p.views');
+  const r = countAndList(`FROM parts p JOIN users u ON u.id=p.user_id ${MODEL_JOIN('p')}`, w, a, 'p.id DESC', limit, offset, COLS + (user.is_admin ? ', p.views' : ''));
   return { total: r.total, page, limit, items: r.items.map(fmtVehicleRow) };
 }, { auth: true });
 
