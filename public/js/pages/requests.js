@@ -128,7 +128,8 @@ export async function requestPage({ el, params }) {
   const r = await api('/api/requests/' + encodeURIComponent(params.id));
   setTitle(`Tražim: ${r.part}`);
   const u = state.user;
-  const canOffer = u && !r.mine && r.status === 'open';
+  // ponudu šalje svako ko nije vlasnik zahtjeva (i admin-otpad); na 'samo otpadi' samo otpadi
+  const canOffer = u && !r.own && r.status === 'open' && (r.trade || r.visibility === 'public');
   render(el, html`
   <section class="page-head"><div class="row"><a href="${r.mine ? '/trazim?moji=1' : '/trazim'}" class="icon-btn" aria-label="Nazad">${icon('back', 22, '#fff')}</a><h1>Tražim dio</h1></div></section>
   <div class="wrap stack" style="padding-top:16px">
@@ -140,7 +141,8 @@ export async function requestPage({ el, params }) {
       ${r.images?.length ? html`<div style="margin-bottom:10px">${gallery(r.images, r.part)}</div>` : ''}
       <div class="hint">${[r.buyer_name, r.city, ago(r.created_at)].filter(Boolean).join(' · ')}</div>
       <div class="hint" style="margin-top:2px">${icon('clock', 14)} ${expiresText(r.created_at)}</div>
-      ${!r.mine && u && r.buyer_phone ? html`<div class="btns3" style="margin-top:12px">${contactButtons({ phone: r.buyer_phone, viber: r.buyer_viber, whatsapp: r.buyer_whatsapp }, `zahtjev „${r.part}“`)}</div>` : ''}
+      ${!r.own && u && r.buyer_phone ? html`<div class="btns3" style="margin-top:12px">${contactButtons({ phone: r.buyer_phone, viber: r.buyer_viber, whatsapp: r.buyer_whatsapp }, `zahtjev „${r.part}“`)}</div>` : ''}
+      ${canOffer ? html`<button type="button" class="btn ${r.my_offer ? 'line' : 'dark'} big block" id="ofGo" style="margin-top:10px">${icon('send', 18, r.my_offer ? 'currentColor' : '#fff')} ${r.my_offer ? 'Izmijeni svoju ponudu' : 'Pošalji ponudu kupcu'}</button>` : ''}
       ${!r.mine && r.trade && !r.buyer_phone ? html`<p class="hint" style="margin:10px 0 0">${icon('lock', 14)} Kupac nije podijelio broj — pošalji ponudu, on će te nazvati.</p>` : ''}
       ${!r.mine && !r.trade ? html`<p class="hint" style="margin:10px 0 0">${icon('lock', 14)} Ime i broj kupca vide samo registrovani otpadi. ${u ? '' : html`<a href="/prijava?next=/trazim/${r.id}">Prijavi se</a> da pošalješ ponudu.`}</p>` : ''}
     </div>
@@ -201,6 +203,10 @@ export async function requestPage({ el, params }) {
     const b = e.submitter; busy(b, true, 'Šaljem…');
     try { await api(`/api/requests/${r.id}/offer`, { body: formData(e.target) }); toast(r.my_offer ? 'Ponuda izmijenjena' : 'Ponuda poslana kupcu'); await requestPage({ el, params }); $('#ofSent', el)?.scrollIntoView({ block: 'center' }); }
     catch (err) { fail(err); busy(b, false); }
+  });
+  $('#ofGo', el)?.addEventListener('click', () => {
+    if ($('#ofSent', el)) $('#ofSent', el).hidden = true;
+    const f = $('#of', el); f.hidden = false; f.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => f.price.focus(), 350);
   });
   $('#ofEdit', el)?.addEventListener('click', () => { $('#ofSent', el).hidden = true; $('#of', el).hidden = false; $('#of', el).price.focus(); });
   $('#ofCancel', el)?.addEventListener('click', () => { $('#of', el).hidden = true; $('#ofSent', el).hidden = false; });

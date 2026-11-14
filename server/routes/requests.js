@@ -67,9 +67,9 @@ app.get('/api/requests/:id', ({ params, user }) => {
   if (mine) {
     out.offers = all(`SELECT ${offerCols} FROM offers o JOIN users s ON s.id=o.user_id WHERE o.request_id=? ORDER BY o.price IS NULL, o.price`, r.id);
     if (user.id === r.user_id) run('UPDATE offers SET seen=1 WHERE request_id=?', r.id);
-  } else {
-    out.my_offer = user ? get(`SELECT ${offerCols} FROM offers o JOIN users s ON s.id=o.user_id WHERE o.request_id=? AND o.user_id=?`, r.id, user.id) : null;
   }
+  // tuđi zahtjev (i admin kad nije njegov): moja ponuda
+  if (user && user.id !== r.user_id) out.my_offer = get(`SELECT ${offerCols} FROM offers o JOIN users s ON s.id=o.user_id WHERE o.request_id=? AND o.user_id=?`, r.id, user.id) || null;
   return out;
 });
 
