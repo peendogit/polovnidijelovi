@@ -80,10 +80,6 @@ export async function partPage({ el, params }) {
   <div class="det-grid">
     <div class="dg-col">
       <div class="dg-media">${gallery(p.images, p.title)}</div>
-      <div class="det dg-info">
-        <h2 class="det-h">${icon('list', 20)} Podaci o dijelu</h2>
-        <dl class="facts">${facts.map(([a, b]) => html`<div><dt>${a}</dt><dd>${b}</dd></div>`)}</dl>
-      </div>
     </div>
     <div class="dg-col">
       <div class="det dg-side">
@@ -109,6 +105,10 @@ export async function partPage({ el, params }) {
           <a class="btn dark" href="/uredi/dio/${p.id}">${icon('edit', 18, '#fff')} Uredi</a>
           <button class="btn danger" id="del">Obriši</button>
         </div></div>` : ''}
+    </div>
+    <div class="det dg-info">
+        <h2 class="det-h">${icon('list', 20)} Podaci o dijelu</h2>
+        <dl class="facts">${facts.map(([a, b]) => html`<div><dt>${a}</dt><dd>${b}</dd></div>`)}</dl>
     </div>
   </div>
   ${p.similar?.length ? html`<section class="sec"><div class="sec-h"><h2>Još za ${p.make_name} ${p.generation || ''}</h2><a href="/dijelovi${qs({ make: p.make_id, gen: p.model_id })}">Svi</a></div>

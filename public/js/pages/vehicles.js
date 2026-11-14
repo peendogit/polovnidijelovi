@@ -95,10 +95,6 @@ export async function vehiclePage({ el, params }) {
   <div class="det-grid">
     <div class="dg-col">
       <div class="dg-media">${gallery(v.images, name)}</div>
-      <div class="det dg-info">
-        <h2 class="det-h">${icon('list', 20)} Podaci o vozilu</h2>
-        <dl class="facts">${facts.map(([a, b]) => html`<div><dt>${a}</dt><dd>${b}</dd></div>`)}</dl>
-      </div>
     </div>
     <div class="dg-col">
       <div class="det dg-side" id="pitaj">
@@ -124,6 +120,10 @@ export async function vehiclePage({ el, params }) {
           ${v.status === 'active' ? html`<button class="btn line" data-st="done">Rastavljeno</button>` : html`<button class="btn line" data-st="active">Ponovo aktiviraj</button>`}
           <button class="btn danger" id="del">Obriši</button>
         </div></div>` : ''}
+    </div>
+    <div class="det dg-info">
+        <h2 class="det-h">${icon('list', 20)} Podaci o vozilu</h2>
+        <dl class="facts">${facts.map(([a, b]) => html`<div><dt>${a}</dt><dd>${b}</dd></div>`)}</dl>
     </div>
   </div>
   <section class="sec">

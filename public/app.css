@@ -283,9 +283,10 @@ fieldset{border:0;margin:0;padding:0}
   .det-grid .g-arr{display:flex}
   .det-grid .gallery .n{left:14px;right:auto;bottom:14px;border-radius:14px;padding:4px 12px;background:rgba(27,30,34,.85)}
   .det-grid .dg-side h1{font-size:26px}
-  .dg-info .facts{display:block;border:0;margin:0}
+  .dg-info{grid-column:1/-1;margin-top:0!important}
+  .dg-info .facts{display:grid;grid-template-columns:1fr 1fr;column-gap:48px;border:0;margin:0}
   .dg-info .facts div{flex-direction:row;justify-content:space-between;gap:16px;padding:11px 4px;border:0!important;border-bottom:1px solid var(--line)!important;margin:0}
-  .dg-info .facts div:last-child{border-bottom:0!important}
+  .dg-info .facts div:last-child,.dg-info .facts div:nth-last-child(2):nth-child(odd){border-bottom:0!important}
   .dg-info .facts dt{font-size:15px;font-weight:500;color:var(--muted)}
   .dg-info .facts dd{font-size:15px;text-align:right}
   .modal{align-items:center}
