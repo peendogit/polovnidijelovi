@@ -162,12 +162,12 @@ export async function requestPage({ el, params }) {
       <div class="sec-h" style="margin-top:6px"><h2>Ponude (${r.offers.length})</h2></div>
       ${r.offers.length ? html`<div class="list">${r.offers.map(o => html`<div class="row-item" style="flex-direction:column;gap:8px">
         <div style="display:flex;justify-content:space-between;width:100%;gap:10px;align-items:baseline">
-          <a href="/prodavac/${o.user_id}" style="font-weight:700;font-size:16px">${o.seller_name}</a>
+          <span><a href="/prodavac/${o.user_id}" style="font-weight:700;font-size:16px">${o.seller_name}</a>${o.user_id === u?.id ? html` <span class="badge acc">tvoja ponuda</span>` : ''}</span>
           <span style="font-family:var(--head);font-size:24px;font-weight:800">${km(o.price)}</span></div>
         <div class="hint">${[o.seller_type === 'otpad' ? 'Otpad' : 'Privatno', o.seller_city, ago(o.created_at)].filter(Boolean).join(' · ')} ${verifiedBadge(o.seller_verified)}${o.seller_ships ? ' · šalje brzom poštom' : ''}</div>
         ${o.message ? html`<div class="desc">${o.message}</div>` : ''}
         ${o.part_id ? html`<a href="/dio/${o.part_id}" style="font-weight:600">Pogledaj oglas dijela →</a>` : ''}
-        <div class="btns3" style="width:100%">${contactButtons({ phone: o.seller_phone, viber: o.seller_viber, whatsapp: o.seller_whatsapp }, `ponuda za „${r.part}“`)}</div>
+        ${r.own ? html`<div class="btns3" style="width:100%">${contactButtons({ phone: o.seller_phone, viber: o.seller_viber, whatsapp: o.seller_whatsapp }, `ponuda za „${r.part}“`)}</div>` : ''}
       </div>`)}</div>` : html`<div class="empty"><strong>Još nema ponuda</strong>Otpadi su obaviješteni. Ponude će se pojaviti ovdje.</div>`}
       ${r.own ? html`<button class="btn line block" id="close">${r.status === 'open' ? 'Našao sam dio — zatvori zahtjev' : 'Ponovo otvori zahtjev'}</button>` : ''}` : ''}
     ${r.my_offer ? html`<div class="card offer-sent" id="ofSent">
