@@ -91,7 +91,7 @@ export async function partPage({ el, params }) {
         <div class="price-row">
           <div class="price">${km(p.price)} ${p.negotiable ? html`<small>· po dogovoru</small>` : ''}</div>
           <button class="icon-btn round" id="share" aria-label="Podijeli">${icon('share', 22)}</button>
-          <button class="icon-btn round" id="fav" aria-label="${p.fav ? 'Ukloni iz sačuvanih' : 'Sačuvaj'}">${icon('heart', 22, p.fav ? '#B42318' : 'currentColor')}</button>
+          <button class="icon-btn round fav ${p.fav ? 'on' : ''}" id="fav" aria-pressed="${p.fav ? 'true' : 'false'}" aria-label="${p.fav ? 'Ukloni iz sačuvanih' : 'Sačuvaj'}">${icon('heart', 22)}</button>
         </div>
         <div class="btns3" style="margin-top:14px">${contactButtons(p.seller, ctxText)}</div>
         ${p.mine ? '' : html`<button class="btn line block" id="ask" style="margin-top:8px">${icon('chat', 18)} Pošalji upit prodavcu</button>`}
@@ -121,7 +121,10 @@ export async function partPage({ el, params }) {
   $('#ask', el)?.addEventListener('click', () => inquiryModal({ part_id: p.id }, `Zanima me: ${p.title}${p.vehicle ? ' za ' + p.vehicle : ''}. Da li je još dostupno?`));
   $('#fav', el).onclick = async () => {
     if (!state.user) return go('/prijava?next=' + encodeURIComponent(location.pathname));
-    try { const r = await api('/api/favorites', { body: { kind: 'part', id: p.id } }); toast(r.fav ? 'Sačuvano' : 'Uklonjeno iz sačuvanih'); partPage({ el, params }); } catch (e) { fail(e); }
+    const b = $('#fav', el);
+    b.classList.toggle('on'); b.classList.add('pop'); setTimeout(() => b.classList.remove('pop'), 300);
+    try { const r = await api('/api/favorites', { body: { kind: 'part', id: p.id } }); b.classList.toggle('on', r.fav); b.setAttribute('aria-pressed', String(r.fav)); b.setAttribute('aria-label', r.fav ? 'Ukloni iz sačuvanih' : 'Sačuvaj'); toast(r.fav ? 'Sačuvano' : 'Uklonjeno iz sačuvanih'); }
+    catch (e) { b.classList.toggle('on'); fail(e); }
   };
   $('#share', el).onclick = () => share(`${p.title} ${p.vehicle || ''} — ${km(p.price)}`);
   $('#rep', el)?.addEventListener('click', () => reportModal('part', p.id));

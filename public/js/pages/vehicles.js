@@ -104,7 +104,7 @@ export async function vehiclePage({ el, params }) {
         <div class="price-row">
           <div class="price" style="font-size:22px">Vozilo za dijelove</div>
           <button class="icon-btn round" id="share" aria-label="Podijeli">${icon('share', 22)}</button>
-          <button class="icon-btn round" id="fav" aria-label="${v.fav ? 'Ukloni iz sačuvanih' : 'Sačuvaj'}">${icon('heart', 22, v.fav ? '#B42318' : 'currentColor')}</button>
+          <button class="icon-btn round fav ${v.fav ? 'on' : ''}" id="fav" aria-pressed="${v.fav ? 'true' : 'false'}" aria-label="${v.fav ? 'Ukloni iz sačuvanih' : 'Sačuvaj'}">${icon('heart', 22)}</button>
         </div>
         <div class="btns3" style="margin-top:14px">${contactButtons(v.seller, `${name} ${v.year || ''} — ${location.origin}${vehicleUrl(v)}`)}</div>
         ${v.mine ? '' : html`<button class="btn dark block big" id="ask" style="margin-top:8px">${icon('chat', 18, '#fff')} Pitaj za dio sa ovog vozila</button>`}
@@ -141,7 +141,10 @@ export async function vehiclePage({ el, params }) {
   $('#ask', el)?.addEventListener('click', () => inquiryModal({ vehicle_id: v.id }, `Zanima me dio sa vozila ${name} ${v.year || ''}: `));
   $('#fav', el).onclick = async () => {
     if (!state.user) return go('/prijava?next=' + encodeURIComponent(location.pathname));
-    try { const r = await api('/api/favorites', { body: { kind: 'vehicle', id: v.id } }); toast(r.fav ? 'Sačuvano' : 'Uklonjeno'); vehiclePage({ el, params }); } catch (e) { fail(e); }
+    const b = $('#fav', el);
+    b.classList.toggle('on'); b.classList.add('pop'); setTimeout(() => b.classList.remove('pop'), 300);
+    try { const r = await api('/api/favorites', { body: { kind: 'vehicle', id: v.id } }); b.classList.toggle('on', r.fav); b.setAttribute('aria-pressed', String(r.fav)); b.setAttribute('aria-label', r.fav ? 'Ukloni iz sačuvanih' : 'Sačuvaj'); toast(r.fav ? 'Sačuvano' : 'Uklonjeno'); }
+    catch (e) { b.classList.toggle('on'); fail(e); }
   };
   $('#share', el).onclick = () => share(`${name} ${v.year || ''} — vozilo za dijelove`);
   $('#rep', el)?.addEventListener('click', () => reportModal('vehicle', v.id));

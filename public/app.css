@@ -455,3 +455,8 @@ details summary{cursor:pointer}
 img.thumb{object-fit:cover}
 .gallery .strip img{max-height:none;object-fit:contain}
 .imgs .im img{position:absolute;inset:0}
+
+/* Sačuvaj: srce se popuni crvenom */
+.icon-btn.fav svg{transition:fill .15s,stroke .15s,transform .15s}
+.icon-btn.fav.on svg{fill:#E0242B;stroke:#E0242B}
+.icon-btn.fav.pop svg{transform:scale(1.25)}
