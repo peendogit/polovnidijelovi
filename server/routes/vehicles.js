@@ -4,6 +4,7 @@ import { get, run, all } from '../db.js';
 import { COLORS, upper, gearsInt, bodyKind, driveKind, bad, notFound, str, int, imgList, modelById, normalize, searchWords, rateLimit, FUELS } from '../lib.js';
 import { vehicleFilter, MODEL_JOIN, MODEL_COLS, sellerOf, fmtVehicleRow, pageArgs, countAndList } from './common.js';
 import { listParts, own } from './parts.js';
+import { visibleWhere, publicReq } from './requests.js';
 
 const COLS = `v.id, (v.featured_until > datetime('now')) featured, v.year, v.fuel, v.engine, v.engine_code, v.power_kw, v.gearbox, v.gearbox_code, v.gears, v.drive, v.body, v.color, v.color_code, v.city, v.images, v.status, v.created_at, v.user_id,
   v.make_id, v.model_id, v.model_text, v.mileage, u.name seller_name, u.type seller_type, u.verified seller_verified, u.phone seller_phone, ${MODEL_COLS},
@@ -110,12 +111,12 @@ app.get('/api/my/vehicles', ({ user, query }) => {
 }, { auth: true });
 
 // Početna: najnovije
-app.get('/api/home', () => ({
+app.get('/api/home', ({ user }) => ({
   parts: listParts({ limit: 8, sort: 'novo' }).items,
   featured: listParts({ featured: 1, limit: 8 }).items,
   vehicles: listVehicles({ limit: 5 }).items,
-  requests: all(`SELECT r.id, r.part, r.year, r.city, r.created_at, r.model_text, ${MODEL_COLS},
+  requests: all(`SELECT r.id, r.user_id, r.part, r.year, r.city, r.created_at, r.model_text, ${MODEL_COLS},
       (SELECT COUNT(*) FROM offers o WHERE o.request_id=r.id) offers
-    FROM requests r ${MODEL_JOIN('r')} WHERE r.status='open' ORDER BY r.id DESC LIMIT 5`).map(fmtVehicleRow),
+    FROM requests r ${MODEL_JOIN('r')} WHERE r.status='open' AND ${visibleWhere(user)[0]} ORDER BY r.id DESC LIMIT 5`, ...visibleWhere(user)[1]).map(x => publicReq(fmtVehicleRow(x), user)),
 }));
 

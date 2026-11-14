@@ -19,6 +19,7 @@ const P = {
   pin: '<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
   heart: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/>',
   share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   check: '<path d="M20 6L9 17l-5-5"/>',
   x: '<path d="M18 6L6 18M6 6l12 12"/>',
   camera: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
@@ -132,10 +133,10 @@ export function requestRow(r) {
   return html`<a class="row-item" href="/trazim/${r.id}">
     <div class="thumb" style="width:52px;height:52px;border-radius:26px;background:var(--accent)">${icon('send', 20, '#1B1E22')}</div>
     <div class="info">
-      <span class="t">${r.part}</span>
+      <span class="t">${r.part}${r.visibility === 'otpadi' ? html` <span class="badge" title="Vide samo otpadi">${icon('lock', 12)} samo otpadi</span>` : ''}</span>
       <span class="s">${[r.vehicle || r.model_text, r.year].filter(Boolean).join(' · ')}</span>
       <span class="s">${[r.city, ago(r.created_at)].filter(Boolean).join(' · ')}${r.status === 'closed' ? ' · zatvoren' : ''}</span>
-      <span class="s" style="font-weight:700;color:var(--text)">${r.offers ? `${r.offers} ${r.offers === 1 ? 'ponuda' : 'ponuda'}` : 'Još nema ponuda'}${r.my_offer !== undefined && r.my_offer !== null ? ` · tvoja: ${km(r.my_offer)}` : ''}${r.new_offers ? html` <span class="num">${r.new_offers} nova</span>` : ''}</span>
+      <span class="s" style="font-weight:700;color:var(--text)">${r.offers === undefined ? (r.my_offer != null ? '' : state.user?.type === 'otpad' ? 'Pošalji ponudu →' : 'Otpadi šalju ponude kupcu →') : r.offers ? `${r.offers} ${r.offers === 1 ? 'ponuda' : 'ponuda'}` : 'Još nema ponuda'}${r.my_offer !== undefined && r.my_offer !== null ? `${r.offers === undefined ? '' : ' · '}Tvoja ponuda: ${km(r.my_offer)}` : ''}${r.new_offers ? html` <span class="num">${r.new_offers} nova</span>` : ''}</span>
     </div>
   </a>`;
 }

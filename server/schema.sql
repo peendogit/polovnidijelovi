@@ -137,6 +137,8 @@ CREATE TABLE IF NOT EXISTS requests (
   city TEXT,
   images TEXT DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'open',     -- open | closed
+  visibility TEXT NOT NULL DEFAULT 'otpadi', -- otpadi (samo prijavljeni otpadi) | public (svi)
+  show_phone INTEGER NOT NULL DEFAULT 1,     -- otpadi vide broj kupca
   search TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

@@ -4,13 +4,31 @@ import { all, get, run } from '../db.js';
 import { bad, notFound, forbidden, str, int, num, imgList, modelById, searchWords, normalize, rateLimit } from '../lib.js';
 import { vehicleFilter, MODEL_JOIN, MODEL_COLS, fmtVehicleRow, pageArgs, countAndList } from './common.js';
 
-const COLS = `r.id, r.user_id, r.part, r.description, r.year, r.engine, r.city, r.images, r.status, r.created_at, r.make_id, r.model_id, r.model_text,
+const COLS = `r.id, r.user_id, r.part, r.visibility, r.description, r.year, r.engine, r.city, r.images, r.status, r.created_at, r.make_id, r.model_id, r.model_text,
   u.name buyer_name, ${MODEL_COLS}, (SELECT COUNT(*) FROM offers o WHERE o.request_id=r.id) offers`;
 const FROM = `FROM requests r JOIN users u ON u.id=r.user_id AND u.blocked=0 ${MODEL_JOIN('r')}`;
+
+// Privatnost: zahtjev "samo otpadi" vide samo prijavljeni otpadi (i admin); broj kupca i broj ponuda vide samo otpadi.
+export const isTrade = user => !!user && (user.type === 'otpad' || !!user.is_admin);
+// broj ponuda vidi samo kupac (i admin); ime kupca samo otpadi
+export function publicReq(r, user) {
+  if (user && (r.user_id === user.id || user.is_admin)) return r;
+  const o = { ...r };
+  delete o.offers;
+  if (!isTrade(user)) o.buyer_name = 'Kupac';
+  return o;
+}
+// za listu: koje zahtjeve ovaj korisnik smije vidjeti
+export function visibleWhere(user) {
+  if (isTrade(user)) return ['1', []];
+  if (user) return ["(r.visibility='public' OR r.user_id=?)", [user.id]];
+  return ["r.visibility='public'", []];
+}
 
 app.get('/api/requests', ({ query, user }) => {
   const [w, a] = vehicleFilter(query, 'r');
   w.unshift("r.status='open'");
+  const [vw, va] = visibleWhere(user); w.push(vw); a.push(...va);
   if (query.city) { w.push('r.city=?'); a.push(query.city); }
   for (const word of searchWords(query.q)) {
     w.push('r.search LIKE ?'); a.push(`%${word}%`);
@@ -18,7 +36,7 @@ app.get('/api/requests', ({ query, user }) => {
   if (query.unanswered && user) { w.push('NOT EXISTS (SELECT 1 FROM offers o WHERE o.request_id=r.id AND o.user_id=?)'); a.push(user.id); }
   const { limit, offset, page } = pageArgs(query, 30);
   const r = countAndList(FROM, w, a, 'r.id DESC', limit, offset, COLS + (user ? `, (SELECT price FROM offers o WHERE o.request_id=r.id AND o.user_id=${Number(user.id)}) my_offer` : ''));
-  return { total: r.total, page, limit, items: r.items.map(fmtVehicleRow) };
+  return { total: r.total, page, limit, private_hidden: !isTrade(user), items: r.items.map(x => publicReq(fmtVehicleRow(x), user)) };
 });
 
 // otpad je pogledao zahtjeve — skini broj sa ikone
@@ -32,17 +50,21 @@ app.get('/api/requests/:id', ({ params, user }) => {
     FROM requests r JOIN users u ON u.id=r.user_id ${MODEL_JOIN('r')} WHERE r.id=?`, int(params.id));
   if (!r) throw notFound('Zahtjev ne postoji');
   const mine = user && (user.id === r.user_id || user.is_admin);
-  const out = fmtVehicleRow(r);
+  if (!mine && r.visibility !== 'public' && !isTrade(user)) {
+    throw Object.assign(new Error(user ? 'Ovaj zahtjev vide samo otpadi.' : 'Ovaj zahtjev vide samo prijavljeni otpadi. Prijavi se.'), { status: 403 });
+  }
+  const out = publicReq(fmtVehicleRow(r), user);
   out.mine = !!mine;
-  // telefon kupca vide samo prijavljeni korisnici (otpadi da ga mogu nazvati)
-  if (!user) { delete out.buyer_phone; delete out.buyer_viber; delete out.buyer_whatsapp; }
+  out.trade = isTrade(user);
+  // telefon kupca vide samo otpadi, i to samo ako je kupac dozvolio
+  if (!mine && !(isTrade(user) && r.show_phone)) { delete out.buyer_phone; delete out.buyer_viber; delete out.buyer_whatsapp; }
+  delete out.search;
   const offerCols = `o.id, o.price, o.message, o.created_at, o.part_id, o.user_id, s.name seller_name, s.type seller_type, s.phone seller_phone,
     s.viber seller_viber, s.whatsapp seller_whatsapp, s.city seller_city, s.verified seller_verified, s.ships seller_ships`;
   if (mine) {
     out.offers = all(`SELECT ${offerCols} FROM offers o JOIN users s ON s.id=o.user_id WHERE o.request_id=? ORDER BY o.price IS NULL, o.price`, r.id);
     if (user.id === r.user_id) run('UPDATE offers SET seen=1 WHERE request_id=?', r.id);
   } else {
-    out.offers_count = get('SELECT COUNT(*) c FROM offers WHERE request_id=?', r.id).c;
     out.my_offer = user ? get(`SELECT ${offerCols} FROM offers o JOIN users s ON s.id=o.user_id WHERE o.request_id=? AND o.user_id=?`, r.id, user.id) : null;
   }
   return out;
@@ -56,10 +78,10 @@ app.post('/api/requests', ({ user, body }) => {
   if (!m && !str(body.model_text) && !str(body.make_id)) throw bad('Izaberi vozilo');
   const desc = str(body.description, 2000);
   const search = normalize([part, desc, m?.make_name, m?.name, body.model_text, body.engine].join(' '));
-  const r = run(`INSERT INTO requests (user_id, make_id, model_id, model_text, year, engine, part, description, city, images, search)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+  const r = run(`INSERT INTO requests (user_id, make_id, model_id, model_text, year, engine, part, description, city, images, search, visibility, show_phone)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   user.id, m ? m.make_id : str(body.make_id, 60), m?.id, str(body.model_text, 80), int(body.year), str(body.engine, 40), part,
-  desc, str(body.city, 60) || user.city, imgList(body.images), search);
+  desc, str(body.city, 60) || user.city, imgList(body.images), search, body.visibility === 'public' ? 'public' : 'otpadi', body.show_phone === false || body.show_phone === 0 || body.show_phone === '0' ? 0 : 1);
   return { id: Number(r.lastInsertRowid) };
 }, { auth: true, verified: true });
 
@@ -68,6 +90,17 @@ app.post('/api/requests/:id/close', ({ user, params }) => {
   if (!r) throw notFound();
   if (r.user_id !== user.id && !user.is_admin) throw forbidden();
   run("UPDATE requests SET status=? WHERE id=?", r.status === 'open' ? 'closed' : 'open', r.id);
+  return { ok: true };
+}, { auth: true });
+
+// kupac mijenja ko vidi zahtjev i da li otpadi vide broj
+app.post('/api/requests/:id/privacy', ({ user, params, body }) => {
+  const r = get('SELECT * FROM requests WHERE id=?', int(params.id));
+  if (!r) throw notFound();
+  if (r.user_id !== user.id && !user.is_admin) throw forbidden();
+  const vis = body.visibility === undefined ? r.visibility : (body.visibility === 'public' ? 'public' : 'otpadi');
+  const ph = body.show_phone === undefined ? r.show_phone : (body.show_phone ? 1 : 0);
+  run('UPDATE requests SET visibility=?, show_phone=? WHERE id=?', vis, ph, r.id);
   return { ok: true };
 }, { auth: true });
 

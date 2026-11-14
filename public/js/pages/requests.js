@@ -4,6 +4,7 @@ import { typeSuggest, icon, vehiclePicker, requestRow, citySelect, pagedList, co
 export async function requestsPage({ el, query: q }) {
   setTitle('Tražim dio');
   const otpad = state.user?.type === 'otpad';
+  const trade = otpad || state.user?.is_admin;
   render(el, html`
   <section class="page-head">
     <div class="row"><h1 style="padding-left:12px">Tražim dio</h1></div>
@@ -18,7 +19,8 @@ export async function requestsPage({ el, query: q }) {
       ${q.make || q.q || q.city || q.unanswered ? html`<a href="/trazim" class="reset-link">Poništi pretragu</a>` : ''}
     </form>
   </section>
-  <div class="wrap"><div class="count-line"><span class="c" id="rc">…</span></div><div id="rl"></div></div>`);
+  <div class="wrap">${trade ? '' : html`<div class="priv-note">${icon('lock', 18)} <span>Zbog privatnosti kupaca većinu zahtjeva vide samo registrovani otpadi. Ovdje su zahtjevi koje su kupci objavili javno${state.user ? ' i tvoji' : ''}. Ponude uvijek vidi samo kupac.</span></div>`}
+    <div class="count-line"><span class="c" id="rc">…</span></div><div id="rl"></div></div>`);
   const picker = await vehiclePicker($('#rp', el), { make: q.make, model: q.model, gen: q.gen });
   $('#rf', el).onsubmit = e => {
     e.preventDefault();
@@ -41,7 +43,7 @@ export async function newRequestPage({ el, query: q }) {
   setTitle('Objavi šta tražiš');
   render(el, html`
   <section class="page-head"><div class="row"><a href="/trazim" class="icon-btn" aria-label="Nazad">${icon('back', 22, '#fff')}</a><h1>Tražim dio</h1></div>
-    <p class="sub">Svi otpadi vide tvoj zahtjev i javljaju ti se sa cijenom.</p></section>
+    <p class="sub">Otpadi vide tvoj zahtjev i javljaju ti se sa cijenom. Ponude vidiš samo ti.</p></section>
   <form class="wrap stack" id="nr" style="padding-top:16px">
     <div class="card stack">
       <strong>Za koje vozilo?</strong>
@@ -57,7 +59,13 @@ export async function newRequestPage({ el, query: q }) {
       <label class="f"><span>Tvoj grad</span>${await citySelect('city', state.user.city, 'Izaberi grad')}</label>
       <div><div class="f" style="margin-bottom:6px;font-size:12.5px;font-weight:600;color:var(--muted)">Slika (ako imaš — npr. naljepnica dijela)</div><div id="ni"></div></div>
     </div>
-    <p class="hint" style="margin:0">Otpadi će te zvati na <strong>${state.user.phone}</strong>. Ponude vidiš u Profilu.</p>
+    <div class="card stack">
+      <strong>${icon('lock', 18)} Privatnost</strong>
+      <label class="radio-row"><input type="radio" name="visibility" value="otpadi" checked><span><strong>Samo otpadi</strong> (preporučeno)<br><small>Zahtjev vide samo registrovani otpadi. Ne pojavljuje se javno ni na Google-u.</small></span></label>
+      <label class="radio-row"><input type="radio" name="visibility" value="public"><span><strong>Svi posjetioci</strong><br><small>Zahtjev je javan (bez tvog imena i broja). Može ga vidjeti više prodavaca.</small></span></label>
+      <label class="check"><input type="checkbox" name="show_phone" checked> Otpadi mogu vidjeti moj broj (${state.user.phone}) i nazvati me</label>
+      <span class="hint">Ponude, cijene i ko ti je ponudio vidiš samo ti. Ime i broj nikad nisu javni.</span>
+    </div>
     <button class="btn accent big block">${icon('send', 20)} Objavi zahtjev</button>
   </form>`);
   const picker = await vehiclePicker($('#np', el), { make: q.make, model: q.model, gen: q.gen }, { anyText: 'Izaberi marku' });
@@ -72,7 +80,7 @@ export async function newRequestPage({ el, query: q }) {
     if (imgs.busy()) return toast('Sačekaj da se slike učitaju', true);
     const b = e.submitter; busy(b, true, 'Objavljujem…');
     try {
-      const r = await api('/api/requests', { body: { ...f, make_id: v.make, model_id: v.gen || null, model_text: f.model_text || (!v.gen && v.model ? v.label : ''), images: imgs.get() } });
+      const r = await api('/api/requests', { body: { ...f, show_phone: !!f.show_phone, make_id: v.make, model_id: v.gen || null, model_text: f.model_text || (!v.gen && v.model ? v.label : ''), images: imgs.get() } });
       toast('Objavljeno! Otpadi će ti se javiti.'); go('/trazim/' + r.id, true);
     } catch (err) { fail(err); busy(b, false); }
   };
@@ -94,8 +102,16 @@ export async function requestPage({ el, params }) {
       ${r.images?.length ? html`<div style="margin-bottom:10px">${gallery(r.images, r.part)}</div>` : ''}
       <div class="hint">${[r.buyer_name, r.city, ago(r.created_at)].filter(Boolean).join(' · ')}</div>
       ${!r.mine && u && r.buyer_phone ? html`<div class="btns3" style="margin-top:12px">${contactButtons({ phone: r.buyer_phone, viber: r.buyer_viber, whatsapp: r.buyer_whatsapp }, `zahtjev „${r.part}“`)}</div>` : ''}
-      ${!u ? html`<p class="hint" style="margin:10px 0 0"><a href="/prijava?next=/trazim/${r.id}">Prijavi se</a> da vidiš broj kupca i pošalješ ponudu.</p>` : ''}
+      ${!r.mine && r.trade && !r.buyer_phone ? html`<p class="hint" style="margin:10px 0 0">${icon('lock', 14)} Kupac nije podijelio broj — pošalji ponudu, on će te nazvati.</p>` : ''}
+      ${!r.mine && !r.trade ? html`<p class="hint" style="margin:10px 0 0">${icon('lock', 14)} Ime i broj kupca vide samo registrovani otpadi. ${u ? '' : html`<a href="/prijava?next=/trazim/${r.id}">Prijavi se</a> da pošalješ ponudu.`}</p>` : ''}
     </div>
+    ${r.mine ? html`<div class="card stack" id="priv">
+      <strong>${icon('lock', 18)} Privatnost zahtjeva</strong>
+      <label class="radio-row"><input type="radio" name="visibility" value="otpadi" ${r.visibility !== 'public' ? raw('checked') : ''}><span><strong>Samo otpadi</strong><br><small>Vide ga samo registrovani otpadi.</small></span></label>
+      <label class="radio-row"><input type="radio" name="visibility" value="public" ${r.visibility === 'public' ? raw('checked') : ''}><span><strong>Svi posjetioci</strong><br><small>Javan, bez tvog imena i broja.</small></span></label>
+      <label class="check"><input type="checkbox" name="show_phone" ${r.show_phone ? raw('checked') : ''}> Otpadi mogu vidjeti moj broj i nazvati me</label>
+      <span class="hint">Ponude i cijene uvijek vidiš samo ti.</span>
+    </div>` : ''}
     ${r.mine ? html`
       <div class="sec-h" style="margin-top:6px"><h2>Ponude (${r.offers.length})</h2></div>
       ${r.offers.length ? html`<div class="list">${r.offers.map(o => html`<div class="row-item" style="flex-direction:column;gap:8px">
@@ -125,9 +141,12 @@ export async function requestPage({ el, params }) {
       ${r.my_offer ? html`<div class="btns"><button type="button" class="btn line" id="ofCancel">Odustani</button><button type="button" class="btn danger" id="delOf">Povuci ponudu</button></div>` : ''}
       <span class="hint">Kupac vidi tvoju cijenu, poruku i broj telefona.</span>
     </form>` : ''}
-    ${!r.mine && !canOffer && r.offers_count !== undefined ? html`<p class="hint">${r.offers_count} ${r.offers_count === 1 ? 'ponuda' : 'ponuda'} do sada.</p>` : ''}
   </div>`);
   bindGallery(el, r.images);
+  $('#priv', el)?.addEventListener('change', async () => {
+    const box = $('#priv', el);
+    try { await api(`/api/requests/${r.id}/privacy`, { body: { visibility: box.querySelector('[name=visibility]:checked').value, show_phone: box.querySelector('[name=show_phone]').checked } }); toast('Sačuvano'); } catch (e) { fail(e); }
+  });
   $('#close', el)?.addEventListener('click', async () => {
     try { await api(`/api/requests/${r.id}/close`, { body: {} }); toast('Sačuvano'); requestPage({ el, params }); } catch (e) { fail(e); }
   });

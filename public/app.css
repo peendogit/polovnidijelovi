@@ -416,3 +416,11 @@ details summary{cursor:pointer}
 .pack input:checked+span{border-color:var(--accent);background:#FFF8DD}
 .pack input:focus-visible+span{outline:2px solid var(--dark)}
 .sec-h h2{display:flex;align-items:center;gap:8px}
+
+/* privatnost "Tražim dio" */
+.priv-note{display:flex;gap:10px;align-items:flex-start;background:#fff;border-radius:var(--r);padding:12px 14px;margin-top:14px;font-size:14px;color:#3B414A}
+.priv-note svg{flex-shrink:0;margin-top:2px}
+.radio-row{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1.5px solid var(--line2);border-radius:10px;cursor:pointer;font-size:15px}
+.radio-row input{margin-top:3px;accent-color:var(--dark);width:18px;height:18px;flex-shrink:0}
+.radio-row small{color:var(--muted);font-size:13px}
+.radio-row:has(input:checked){border-color:var(--accent);background:#FFF8DD}
