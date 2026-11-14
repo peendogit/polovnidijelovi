@@ -429,3 +429,14 @@ details summary{cursor:pointer}
 .page-head.center{text-align:center}
 .page-head.center .row{justify-content:center;margin-left:0}
 .page-head.center h1{flex:none}
+
+/* Tražim dio: tabovi Zahtjevi kupaca / Moji zahtjevi */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#2A2E34;border-radius:12px;padding:4px;margin:0 0 14px}
+.seg a{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border-radius:9px;color:var(--muted2);text-decoration:none;font-weight:700;font-size:15px;text-align:center}
+.seg a:hover{color:#fff}
+.seg a.on{background:#fff;color:var(--dark)}
+.seg .num{background:var(--bad);color:#fff}
+.my-req{align-items:center}
+.my-req.closed .t{color:var(--muted)}
+.offers-line{display:flex;align-items:center;gap:6px;margin-top:2px;font-size:14px}
+@media (min-width:760px){.seg{max-width:520px}}

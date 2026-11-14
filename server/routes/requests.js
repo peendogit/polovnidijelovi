@@ -29,6 +29,7 @@ app.get('/api/requests', ({ query, user }) => {
   const [w, a] = vehicleFilter(query, 'r');
   w.unshift("r.status='open'");
   const [vw, va] = visibleWhere(user); w.push(vw); a.push(...va);
+  if (query.others && user) { w.push('r.user_id<>?'); a.push(user.id); }
   if (query.city) { w.push('r.city=?'); a.push(query.city); }
   for (const word of searchWords(query.q)) {
     w.push('r.search LIKE ?'); a.push(`%${word}%`);

@@ -5,22 +5,37 @@ export async function requestsPage({ el, query: q }) {
   setTitle('Tražim dio');
   const otpad = state.user?.type === 'otpad';
   const trade = otpad || state.user?.is_admin;
+  const mine = !!q.moji && !!state.user;
+  const newOffers = state.counts?.offers || 0;
   render(el, html`
   <section class="page-head">
     <div class="row"><h1 style="padding-left:12px">Tražim dio</h1></div>
-    <p class="sub">${otpad ? 'Kupci traže ove dijelove. Pošalji ponudu sa cijenom — kupac te zove.' : 'Kupci objave šta traže, a otpadi im se javljaju sa cijenom.'}</p>
+    <p class="sub">${mine ? 'Tvoji zahtjevi i ponude koje su ti otpadi poslali. Ponude vidiš samo ti.' : otpad ? 'Kupci traže ove dijelove. Pošalji ponudu sa cijenom — kupac te zove.' : 'Kupci objave šta traže, a otpadi im se javljaju sa cijenom.'}</p>
+    ${state.user ? html`<nav class="seg" aria-label="Zahtjevi">
+      <a href="/trazim" class="${mine ? '' : 'on'}">${icon('search', 18)} ${otpad ? 'Kupci traže' : 'Zahtjevi kupaca'}</a>
+      <a href="/trazim?moji=1" class="${mine ? 'on' : ''}">${icon('user', 18)} Moji zahtjevi${newOffers ? html` <span class="num">${newOffers}</span>` : ''}</a>
+    </nav>` : ''}
     <a class="btn accent big block" href="/trazim/novi">${icon('send', 20)} Objavi šta tražiš</a>
-    <form id="rf" class="stack" style="gap:10px;margin-top:14px">
+    ${mine ? '' : html`<form id="rf" class="stack" style="gap:10px;margin-top:14px">
       <div id="rp" class="stack" style="gap:10px"></div>
       <div class="grid2"><label class="f"><span>Dio</span><input name="q" value="${q.q || ''}" placeholder="far, mjenjač…"></label>
       <label class="f"><span>Grad</span>${await citySelect('city', q.city)}</label></div>
       ${otpad ? html`<label class="check" style="color:#fff"><input type="checkbox" name="unanswered" ${q.unanswered ? 'checked' : ''}> Samo gdje još nisam ponudio</label>` : ''}
       <button class="btn line block">${icon('search', 18)} Filtriraj</button>
       ${q.make || q.q || q.city || q.unanswered ? html`<a href="/trazim" class="reset-link">Poništi pretragu</a>` : ''}
-    </form>
+    </form>`}
   </section>
-  <div class="wrap">${trade ? '' : html`<div class="priv-note">${icon('lock', 18)} <span>Zbog privatnosti kupaca većinu zahtjeva vide samo registrovani otpadi. Ovdje su zahtjevi koje su kupci objavili javno${state.user ? ' i tvoji' : ''}. Ponude uvijek vidi samo kupac.</span></div>`}
+  <div class="wrap">${trade || mine ? '' : html`<div class="priv-note">${icon('lock', 18)} <span>Zbog privatnosti kupaca većinu zahtjeva vide samo registrovani otpadi. Ovdje su zahtjevi koje su kupci objavili javno. Svoje zahtjeve nađi u „Moji zahtjevi“.</span></div>`}
     <div class="count-line"><span class="c" id="rc">…</span></div><div id="rl"></div></div>`);
+
+  if (mine) {
+    const items = await api('/api/my/requests');
+    const open = items.filter(r => r.status === 'open').length;
+    $('#rc', el).textContent = `${items.length} ${items.length === 1 ? 'zahtjev' : 'zahtjeva'} · ${open} ${open === 1 ? 'otvoren' : 'otvorenih'}`;
+    render($('#rl', el), items.length ? html`<div class="list">${items.map(r => myRequestRow(r))}</div>`
+      : html`<div class="empty"><strong>Još nisi ništa tražio</strong>Napiši koji dio ti treba — otpadi ti šalju ponude sa cijenom.<div style="margin-top:14px"><a class="btn dark" href="/trazim/novi">${icon('send', 18, '#fff')} Objavi šta tražiš</a></div></div>`);
+    return;
+  }
   const picker = await vehiclePicker($('#rp', el), { make: q.make, model: q.model, gen: q.gen });
   $('#rf', el).onsubmit = e => {
     e.preventDefault();
@@ -29,13 +44,28 @@ export async function requestsPage({ el, query: q }) {
   };
   await pagedList({
     box: $('#rl', el), query: q, per: 30,
-    fetch: page => api('/api/requests' + qs({ ...q, stranica: undefined, page })),
+    fetch: page => api('/api/requests' + qs({ ...q, stranica: undefined, page, others: state.user ? 1 : undefined })),
     draw: (items, total) => {
       $('#rc', el).textContent = `${total} ${total === 1 ? 'otvoren zahtjev' : 'otvorenih zahtjeva'}`;
       return items.length ? html`<div class="list">${items.map(requestRow)}</div>` : html`<div class="empty"><strong>Nema zahtjeva</strong>Promijeni filter ili objavi svoj.</div>`;
     },
   });
   if (otpad && state.counts.requests) { api('/api/requests/seen', { body: {} }).then(loadMe).catch(() => {}); }
+}
+
+// moj zahtjev: status, broj ponuda i nove ponude
+function myRequestRow(r) {
+  const closed = r.status !== 'open';
+  return html`<a class="row-item my-req ${closed ? 'closed' : ''}" href="/trazim/${r.id}">
+    <div class="thumb" style="width:52px;height:52px;border-radius:26px;background:${closed ? '#ECEDEB' : 'var(--dark)'}">${icon(closed ? 'check' : 'send', 20, closed ? '#5A616B' : '#F5B301')}</div>
+    <div class="info">
+      <span class="t">${r.part}</span>
+      <span class="s">${[r.vehicle || r.model_text, r.year].filter(Boolean).join(' · ')}</span>
+      <span class="s">${closed ? 'Zatvoren' : 'Otvoren'} · ${r.visibility === 'public' ? 'javan' : 'samo otpadi'} · ${ago(r.created_at)}</span>
+      <span class="offers-line">${r.offers ? html`<strong>${r.offers} ${r.offers === 1 ? 'ponuda' : 'ponuda'}</strong>` : html`<span class="hint">Još nema ponuda</span>`}${r.new_offers ? html` <span class="num">${r.new_offers} nova</span>` : ''}</span>
+    </div>
+    ${icon('right', 20, '#5A616B')}
+  </a>`;
 }
 
 export async function newRequestPage({ el, query: q }) {
@@ -92,7 +122,7 @@ export async function requestPage({ el, params }) {
   const u = state.user;
   const canOffer = u && !r.mine && r.status === 'open';
   render(el, html`
-  <section class="page-head"><div class="row"><a href="/trazim" class="icon-btn" aria-label="Nazad">${icon('back', 22, '#fff')}</a><h1>Tražim dio</h1></div></section>
+  <section class="page-head"><div class="row"><a href="${r.mine ? '/trazim?moji=1' : '/trazim'}" class="icon-btn" aria-label="Nazad">${icon('back', 22, '#fff')}</a><h1>Tražim dio</h1></div></section>
   <div class="wrap stack" style="padding-top:16px">
     <div class="card">
       ${r.status !== 'open' ? html`<p style="margin:0 0 8px"><span class="badge">Zatvoren</span></p>` : ''}
