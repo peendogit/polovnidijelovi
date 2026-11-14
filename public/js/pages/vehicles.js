@@ -1,6 +1,6 @@
 import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, getMeta } from '../core.js';
 import { vehicleUrl, canonical } from '../core.js';
-import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES, antiSpam, filterFields, bindFilters, hasFilters, crumbs } from '../components.js';
+import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES, antiSpam, filterFields, bindFilters, hasFilters, crumbs, bindScrub } from '../components.js';
 import { inquiryModal, share, reportModal } from './parts.js';
 
 // Vozila za dijelove — filter i lista (nacrt 5)
@@ -40,6 +40,7 @@ export async function vehiclesPage({ el, query: q }) {
 
   const label = picker.get().label;
   let shownTotal = 0;
+  bindScrub($('#vl', el));
   await pagedList({
     box: $('#vl', el), query: q,
     fetch: page => api('/api/vehicles' + qs({ ...q, stranica: undefined, page })),
@@ -50,8 +51,7 @@ export async function vehiclesPage({ el, query: q }) {
         return html`<div class="empty"><strong>Trenutno nema takvih vozila</strong>Objavi „Tražim dio“ — otpadi koji dobiju ovaj model javiće ti se.
           <div style="margin-top:14px"><a class="btn dark" href="/trazim/novi${qs({ make: q.make, model: q.model, gen: q.gen })}">${icon('send', 18, '#fff')} Tražim dio</a></div></div>`;
       }
-      const [first, ...rest] = items;
-      return html`<div class="stack">${vehicleCard(first)}${rest.length ? html`<div class="list">${rest.map(v => vehicleRow(v))}</div>` : ''}</div>`;
+      return html`<div class="vgrid">${items.map(vehicleCard)}</div>`;
     },
   });
   if (q.model && shownTotal) {

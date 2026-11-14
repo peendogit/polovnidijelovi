@@ -78,22 +78,52 @@ export function vehicleTile(v) {
     <span class="meta">${v.city || v.seller_name || ''}</span>
   </a>`;
 }
+// kartica vozila (lista vozila): slika 4:3, na računaru prelaz mišem preko slike lista sve slike
+const isNew = d => d && Date.now() - Date.parse(String(d).replace(' ', 'T') + 'Z') < 3 * 864e5;
 export function vehicleCard(v) {
-  return html`<div class="vcard">
-    <a href="${vehicleUrl(v)}" class="ph" style="text-decoration:none">${v.images?.[0] ? html`<img src="${v.images[0]}" alt="${v.vehicle}" loading="lazy">` : icon('car', 40, '#9AA0A8', 1.4)}
-      <span class="badge dark">Rastavlja se</span></a>
+  const imgs = (v.images || []).slice(0, 6);
+  const specs = [v.engine && (v.engine + (v.engine_code ? ' ' + v.engine_code : '')), v.power_kw && v.power_kw + ' kW', v.gearbox, v.body, v.drive === '4x4' ? '4x4' : null].filter(Boolean);
+  const name = v.vehicle || v.model_text;
+  return html`<article class="vcard">
+    <a href="${vehicleUrl(v)}" class="ph" ${imgs.length > 1 ? raw(`data-imgs="${esc(imgs.join('|'))}"`) : ''} aria-label="${name}">
+      ${imgs[0] ? html`<img src="${imgs[0]}" alt="${name}" loading="lazy">` : icon('car', 44, '#9AA0A8', 1.4)}
+      ${isNew(v.created_at) ? html`<span class="badge acc">NOVO NA PLACU</span>` : html`<span class="badge dark">Rastavlja se</span>`}
+      ${imgs.length > 1 ? html`<span class="pc">${icon('camera', 14, '#fff')} ${v.images.length}</span><span class="segs">${imgs.map((_, i) => html`<i class="${i ? '' : 'on'}"></i>`)}</span>` : ''}
+      ${v.year ? html`<span class="yr">${v.year}</span>` : ''}
+    </a>
     <div class="body">
-      <a href="${vehicleUrl(v)}" style="text-decoration:none">
-        <div class="name">${v.vehicle || v.model_text}</div>
-        <div class="meta">${[v.year, v.fuel, v.engine, v.power_kw ? v.power_kw + ' kW' : null, v.city].filter(Boolean).join(' · ')}</div>
-      </a>
-      <div class="meta" style="display:flex;align-items:center;gap:6px;color:#3B414A">${icon('pin', 16)} ${v.seller_name}${v.seller_verified ? html` ${verifiedBadge(1)}` : ''}</div>
+      <a href="${vehicleUrl(v)}" class="name">${name}</a>
+      ${specs.length || v.fuel ? html`<div class="specs">${[v.fuel, ...specs].filter(Boolean).map(x => html`<span>${x}</span>`)}</div>` : ''}
+      <div class="meta">${icon('pin', 15)} ${[v.seller_name, v.city].filter(Boolean).join(' · ')}${v.seller_verified ? html` ${verifiedBadge(1)}` : ''}</div>
+      ${v.parts_count ? html`<a class="pcount" href="${vehicleUrl(v)}">${icon('wrench', 15)} ${v.parts_count} ${v.parts_count === 1 ? 'dio objavljen' : 'dijelova objavljeno'} →</a>` : ''}
       <div class="btns">
         ${v.seller_phone ? html`<a class="btn accent" href="tel:${intlPhone(v.seller_phone)}">${icon('phone', 17)} Pozovi</a>` : ''}
         <a class="btn line" href="${vehicleUrl(v)}#pitaj">Pitaj za dio</a>
       </div>
     </div>
-  </div>`;
+  </article>`;
+}
+// prelaz mišem preko slike kartice -> mijenja slike (radi i za kartice dodate kasnije)
+export function bindScrub(box) {
+  if (!matchMedia('(hover:hover)').matches) return;
+  box.addEventListener('mousemove', e => {
+    const ph = e.target.closest?.('.vcard .ph[data-imgs]');
+    if (!ph) return;
+    const imgs = ph.dataset.imgs.split('|');
+    const r = ph.getBoundingClientRect();
+    const i = Math.min(imgs.length - 1, Math.max(0, Math.floor((e.clientX - r.left) / r.width * imgs.length)));
+    if (ph.dataset.cur === String(i)) return;
+    ph.dataset.cur = i;
+    const im = ph.querySelector('img'); if (im) im.src = imgs[i];
+    ph.querySelectorAll('.segs i').forEach((s, k) => s.classList.toggle('on', k === i));
+  });
+  box.addEventListener('mouseout', e => {
+    const ph = e.target.closest?.('.vcard .ph[data-imgs]');
+    if (!ph || ph.contains(e.relatedTarget)) return;
+    ph.dataset.cur = 0;
+    const im = ph.querySelector('img'); if (im) im.src = ph.dataset.imgs.split('|')[0];
+    ph.querySelectorAll('.segs i').forEach((s, k) => s.classList.toggle('on', k === 0));
+  });
 }
 
 export function requestRow(r) {
