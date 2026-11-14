@@ -118,7 +118,7 @@ export async function vehiclePage({ el, params }) {
         <div class="btns" style="margin-top:10px">
           <a class="btn accent" href="/objavi/dio?vozilo=${v.id}">${icon('plus', 18)} Dodaj dio</a>
           <a class="btn dark" href="/uredi/vozilo/${v.id}">${icon('edit', 18, '#fff')} Uredi</a>
-          ${v.status === 'active' ? html`<button class="btn line" data-st="done">Rastavljeno</button>` : html`<button class="btn line" data-st="active">Ponovo aktiviraj</button>`}
+          ${v.status === 'active' ? '' : html`<button class="btn line" data-st="active">Ponovo aktiviraj</button>`}
           <button class="btn danger" id="del">Obriši</button>
         </div></div>` : ''}
     </div>
