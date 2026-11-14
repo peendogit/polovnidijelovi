@@ -104,7 +104,8 @@ const server = http.createServer(async (req, res) => {
         const origin = req.headers.origin || req.headers.referer || '';
         if (origin) {
           let oh = ''; try { oh = new URL(origin).host.toLowerCase(); } catch { /* neispravno */ }
-          if (oh !== String(req.headers.host || '').toLowerCase()) throw new HttpError(403, 'Zahtjev nije sa ovog sajta');
+          const okHosts = [String(req.headers.host || '').toLowerCase(), SITE_HOST, 'www.' + SITE_HOST];
+          if (!okHosts.includes(oh)) throw new HttpError(403, 'Zahtjev nije sa ovog sajta');
         }
       }
       const cookies = parseCookies(req.headers.cookie);
