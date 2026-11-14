@@ -110,7 +110,7 @@ app.get('/api/my/vehicles', ({ user, query }) => {
 // Početna: najnovije
 app.get('/api/home', () => ({
   parts: listParts({ limit: 8 }).items,
-  vehicles: listVehicles({ limit: 6 }).items,
+  vehicles: listVehicles({ limit: 5 }).items,
   requests: all(`SELECT r.id, r.part, r.year, r.city, r.created_at, r.model_text, ${MODEL_COLS},
       (SELECT COUNT(*) FROM offers o WHERE o.request_id=r.id) offers
     FROM requests r ${MODEL_JOIN('r')} WHERE r.status='open' ORDER BY r.id DESC LIMIT 5`).map(fmtVehicleRow),

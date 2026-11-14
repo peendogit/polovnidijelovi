@@ -69,6 +69,15 @@ export function vehicleRow(v, opts = {}) {
   </a>`;
 }
 
+// mala kartica vozila (početna: najnovijih 5)
+export function vehicleTile(v) {
+  return html`<a class="vtile" href="${vehicleUrl(v)}">
+    <span class="ph">${v.images?.[0] ? html`<img src="${thumb(v.images[0])}" data-full="${v.images[0]}" alt="${v.vehicle || v.model_text}" loading="lazy">` : icon('car', 32, '#9AA0A8', 1.4)}</span>
+    <span class="name">${v.vehicle || v.model_text}</span>
+    <span class="meta">${[v.year, v.engine, v.fuel].filter(Boolean).join(' · ')}</span>
+    <span class="meta">${v.city || v.seller_name || ''}</span>
+  </a>`;
+}
 export function vehicleCard(v) {
   return html`<div class="vcard">
     <a href="${vehicleUrl(v)}" class="ph" style="text-decoration:none">${v.images?.[0] ? html`<img src="${v.images[0]}" alt="${v.vehicle}" loading="lazy">` : icon('car', 40, '#9AA0A8', 1.4)}

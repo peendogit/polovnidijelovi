@@ -134,6 +134,14 @@ fieldset{border:0;margin:0;padding:0}
 .vcard .name{font-size:18px;font-weight:700}
 .vcard .meta{font-size:14px;color:var(--muted)}
 .cards{display:grid;grid-template-columns:1fr;gap:12px}
+.vtiles{display:grid;grid-auto-flow:column;grid-auto-columns:46%;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -16px;padding:0 16px;scroll-padding:0 16px}
+.vtiles::-webkit-scrollbar{display:none}
+.vtile{background:#fff;border-radius:var(--r);overflow:hidden;text-decoration:none;color:var(--text);display:flex;flex-direction:column;scroll-snap-align:start;padding-bottom:10px}
+.vtile .ph{aspect-ratio:4/3;background:var(--ph);display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.vtile .ph img{width:100%;height:100%;object-fit:cover}
+.vtile .name{font-weight:700;font-size:15px;padding:0 10px;line-height:1.25}
+.vtile .meta{font-size:13px;color:var(--muted);padding:2px 10px 0}
+.vtile:hover .name{text-decoration:underline}
 .more{display:flex;justify-content:center;padding:16px 0}
 .empty{padding:28px 16px;text-align:center;color:var(--muted);background:#fff;border-radius:var(--r)}
 .empty strong{display:block;color:var(--text);font-size:17px;margin-bottom:4px}
@@ -263,6 +271,7 @@ fieldset{border:0;margin:0;padding:0}
   .hero h1{font-size:44px}
   .sec,.wrap{padding-left:24px;padding-right:24px}
   .cards{grid-template-columns:1fr 1fr 1fr}
+  .vtiles{grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));overflow:visible;margin:0;padding:0}
   .list.cols{display:grid;grid-template-columns:1fr 1fr}
   .list.cols .row-item{border-right:1px solid #ECEDEB}
   .stats{grid-template-columns:repeat(5,1fr)}

@@ -1,5 +1,5 @@
 import { html, render, $, api, go, qs, setTitle, state } from '../core.js';
-import { typeSuggest, icon, vehiclePicker, partRow, vehicleCard, vehicleRow, requestRow, filterFields, bindFilters } from '../components.js';
+import { typeSuggest, icon, vehiclePicker, partRow, vehicleTile, requestRow, filterFields, bindFilters } from '../components.js';
 
 export async function homePage({ el }) {
   setTitle('');
@@ -40,11 +40,10 @@ export async function homePage({ el }) {
   };
 
   const d = await api('/api/home');
-  const [first, ...rest] = d.vehicles;
   render($('#hl', el), html`
     <section class="sec">
-      <div class="sec-h"><h2>Rastavlja se</h2><a href="/vozila">Sva vozila</a></div>
-      ${first ? html`<div class="stack">${vehicleCard(first)}${rest.length ? html`<div class="list">${rest.map(v => vehicleRow(v))}</div>` : ''}</div>`
+      <div class="sec-h"><h2>Najnovija vozila za dijelove</h2><a href="/vozila">Sva vozila</a></div>
+      ${d.vehicles.length ? html`<div class="vtiles">${d.vehicles.map(vehicleTile)}</div>`
         : html`<div class="empty"><strong>Još nema vozila</strong>Otpadi: objavite vozila koja rastavljate.<div style="margin-top:12px"><a class="btn dark" href="/objavi/vozilo">Objavi vozilo</a></div></div>`}
     </section>
     <section class="sec">
@@ -58,4 +57,5 @@ export async function homePage({ el }) {
       ${state.user?.type === 'otpad' ? '' : html`<p class="hint" style="margin:8px 2px 0">Imaš otpad? <a href="/registracija?tip=otpad">Registruj se</a> i odgovaraj kupcima sa cijenom.</p>`}
     </section>` : ''}
   `);
+  el.querySelectorAll('.vtile img').forEach(im => { const full = () => { im.src = im.dataset.full; }; if (im.complete && !im.naturalWidth) full(); else im.addEventListener('error', full, { once: true }); });
 }
