@@ -43,7 +43,7 @@ if (!db.prepare('SELECT COUNT(*) c FROM part_types').get().c) {
 }
 if (!cols('parts').includes('color')) db.exec('ALTER TABLE parts ADD COLUMN color TEXT');
 if (!cols('parts').includes('color_code')) db.exec('ALTER TABLE parts ADD COLUMN color_code TEXT');
-for (const [c, t] of [['engine_code', 'TEXT'], ['power_kw', 'INTEGER'], ['gearbox', 'TEXT'], ['gearbox_code', 'TEXT'], ['gears', 'INTEGER']])
+for (const [c, t] of [['engine_code', 'TEXT'], ['power_kw', 'INTEGER'], ['gearbox', 'TEXT'], ['gearbox_code', 'TEXT'], ['gears', 'INTEGER'], ['body', 'TEXT'], ['drive', 'TEXT']])
   if (!cols('parts').includes(c)) db.exec(`ALTER TABLE parts ADD COLUMN ${c} ${t}`);
 
 // Prvo pokretanje: ubaci marke i modele

@@ -1,7 +1,7 @@
 // Oglasi za dijelove
 import { app } from '../router.js';
 import { all, get, run } from '../db.js';
-import { COLORS, upper, gearsInt, gearboxKind, bad, notFound, forbidden, str, int, num, bool, imgList, modelById, vehicleName, normalize, searchWords, rateLimit } from '../lib.js';
+import { COLORS, upper, gearsInt, gearboxKind, bodyKind, driveKind, bad, notFound, forbidden, str, int, num, bool, imgList, modelById, vehicleName, normalize, searchWords, rateLimit } from '../lib.js';
 import { findType, typeById } from '../types.js';
 import { vehicleFilter, MODEL_JOIN, MODEL_COLS, sellerOf, fmtVehicleRow, pageArgs, countAndList } from './common.js';
 
@@ -20,6 +20,17 @@ export function listParts(q, extraWhere = [], extraArgs = []) {
     w.push(`(p.type_id=? OR (${textCond}))`); a.push(int(q.type), ...words.map(x => `%${x}%`));
   } else for (const word of words) { w.push('p.search LIKE ?'); a.push(`%${word}%`); }
   if (q.city) { w.push('p.city=?'); a.push(q.city); }
+  // filteri kao kod vozila; ako dio nema podatak, uzima se sa vozila sa kojeg je skinut
+  const VF = c => `COALESCE(p.${c}, (SELECT vv.${c} FROM vehicles vv WHERE vv.id=p.vehicle_id))`;
+  if (q.fuel) { w.push(`${VF('fuel')}=?`); a.push(String(q.fuel)); }
+  if (q.from) { w.push(`${VF('year')}>=?`); a.push(int(q.from)); }
+  if (q.to) { w.push(`${VF('year')}<=?`); a.push(int(q.to)); }
+  if (q.engine) { w.push(`${VF('engine')} LIKE ?`); a.push(String(q.engine).slice(0, 4) + '%'); }
+  if (q.body) { w.push(`${VF('body')}=?`); a.push(String(q.body)); }
+  if (q.drive) { w.push(`${VF('drive')}=?`); a.push(String(q.drive)); }
+  if (q.color) { w.push(`${VF('color')}=?`); a.push(String(q.color)); }
+  if (q.gearbox === 'automatik') w.push(`(${VF('gearbox')} LIKE 'automatik%' OR ${VF('gearbox')}='DSG')`);
+  else if (q.gearbox === 'manuelni') w.push(`${VF('gearbox')} LIKE 'manuelni%'`);
   if (q.seller) { w.push('p.user_id=?'); a.push(int(q.seller)); }
   if (q.vehicle) { w.push('p.vehicle_id=?'); a.push(int(q.vehicle)); }
   if (q.year) { w.push('(p.year IS NULL OR p.year=?)'); a.push(int(q.year)); }
@@ -76,6 +87,7 @@ function readPart(body, owner) {
     title, type_id: type?.id || null, make_id, model_id: m ? m.id : null, model_text: str(body.model_text, 80), year: int(body.year),
     fuel: str(body.fuel, 30), engine: str(body.engine, 40), engine_code: upper(body.engine_code, 20), power_kw: kw(body.power_kw),
     gearbox: gearboxKind(body.gearbox), gearbox_code: upper(body.gearbox_code, 20), gears: gearsInt(body.gears),
+    body: bodyKind(body.body), drive: driveKind(body.drive),
     part_no: str(body.part_no, 60), side: str(body.side, 30), color: COLORS.includes(body.color) ? body.color : null, color_code: upper(body.color_code, 20),
     condition: ['polovno', 'novo', 'oštećeno'].includes(body.condition) ? body.condition : 'polovno',
     price, negotiable: bool(body.negotiable), description: str(body.description, 4000), city: owner.city || null,

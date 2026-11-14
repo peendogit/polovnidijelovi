@@ -1,5 +1,5 @@
 import { html, render, $, api, go, qs, setTitle, state } from '../core.js';
-import { typeSuggest, icon, vehiclePicker, partRow, vehicleCard, vehicleRow, requestRow } from '../components.js';
+import { typeSuggest, icon, vehiclePicker, partRow, vehicleCard, vehicleRow, requestRow, filterFields, bindFilters } from '../components.js';
 
 export async function homePage({ el }) {
   setTitle('');
@@ -9,14 +9,15 @@ export async function homePage({ el }) {
     <p class="lead">Izaberi auto, nađi dio, pozovi prodavca.</p>
     <form class="card search-card" id="hs" role="search">
       <div id="hp" class="stack" style="gap:10px"></div>
-      <label class="f"><span>Dio</span><input name="q" placeholder="far, branik, mjenjač…" autocomplete="off"></label><input type="hidden" name="type">
+      <label class="f"><span>Dio ili kataloški broj</span><input name="q" placeholder="far, branik, mjenjač…" autocomplete="off"></label><input type="hidden" name="type">
+      ${await filterFields({}, true)}
       <button class="btn accent big block">Pretraži</button>
     </form>
   </section>
   <section class="sec" style="padding-top:18px">
     <div class="tiles">
       <a class="tile" href="/dijelovi">${icon('wrench', 26, '#1B1E22', 1.8)}<strong>Dijelovi</strong><span>Pojedinačni dijelovi</span></a>
-      <a class="tile dark" href="/vozila">${icon('car', 26, '#F5B301', 1.8)}<strong>Vozila za dijelove</strong><span>Sva vozila na otpadima</span></a>
+      <a class="tile" href="/vozila">${icon('car', 26, '#1B1E22', 1.8)}<strong>Vozila za dijelove</strong><span>Sva vozila na otpadima</span></a>
     </div>
   </section>
   <section class="sec" style="padding-top:12px">
@@ -29,12 +30,13 @@ export async function homePage({ el }) {
   <div id="hl"><div class="loading">Učitavam…</div></div>`);
 
   const picker = await vehiclePicker($('#hp', el), {});
+  const filters = bindFilters($('#hs', el), $('#hp', el), picker);
   typeSuggest($('#hs input[name=q]', el), $('#hs input[name=type]', el));
   $('#hs', el).onsubmit = e => {
     e.preventDefault();
     const v = picker.get();
     const f = e.target;
-    go('/dijelovi' + qs({ make: v.make, model: v.model, gen: v.gen, q: f.q.value.trim(), type: f.type.value }));
+    go('/dijelovi' + qs({ make: v.make, model: v.model, gen: v.gen, q: f.q.value.trim(), type: f.type.value, ...filters() }));
   };
 
   const d = await api('/api/home');

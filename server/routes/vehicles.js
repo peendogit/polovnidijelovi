@@ -1,7 +1,7 @@
 // Vozila za dijelove (otpadi rastavljaju)
 import { app } from '../router.js';
 import { get, run, all } from '../db.js';
-import { COLORS, upper, gearsInt, bad, notFound, str, int, imgList, modelById, normalize, searchWords, rateLimit, FUELS } from '../lib.js';
+import { COLORS, upper, gearsInt, bodyKind, driveKind, bad, notFound, str, int, imgList, modelById, normalize, searchWords, rateLimit, FUELS } from '../lib.js';
 import { vehicleFilter, MODEL_JOIN, MODEL_COLS, sellerOf, fmtVehicleRow, pageArgs, countAndList } from './common.js';
 import { listParts, own } from './parts.js';
 
@@ -61,7 +61,7 @@ function readVehicle(body, owner) {
   const d = {
     make_id, model_id: m ? m.id : null, model_text: str(body.model_text, 80), year,
     fuel: FUELS.includes(body.fuel) ? body.fuel : null, engine: str(body.engine, 40), engine_code: upper(body.engine_code, 20), gearbox_code: upper(body.gearbox_code, 20), gears: gearsInt(body.gears),
-    power_kw: int(body.power_kw), gearbox: str(body.gearbox, 30), drive: ['prednji', 'zadnji', '4x4'].includes(body.drive) ? body.drive : null, body: str(body.body, 30), color: COLORS.includes(body.color) ? body.color : null, color_code: upper(body.color_code, 20),
+    power_kw: int(body.power_kw), gearbox: str(body.gearbox, 30), drive: driveKind(body.drive), body: bodyKind(body.body), color: COLORS.includes(body.color) ? body.color : null, color_code: upper(body.color_code, 20),
     mileage: int(body.mileage), description: str(body.description, 4000), city: owner.city || null,
     images: imgList(body.images),
   };

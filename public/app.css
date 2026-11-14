@@ -145,6 +145,13 @@ fieldset{border:0;margin:0;padding:0}
 .chip.on{background:var(--accent);color:var(--dark);border-color:var(--accent)}
 .chip.light{border-color:var(--line2);color:var(--text);background:#fff}
 .chip.light.on{background:var(--dark);color:#fff;border-color:var(--dark)}
+/* dodatni filteri: telefon — dugmići pa jedno polje; računar — sva polja u redovima */
+.fx{display:flex;flex-direction:column;gap:10px}
+.fx-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fx-fields>[data-f]{display:none;grid-column:1/-1}
+.fx-fields>[data-f=year]{grid-column:auto}
+.fx-fields>.show{display:flex}
+.fx-fields:not(:has(.show)){display:none}
 
 /* ---------- detalj ---------- */
 .gallery{position:relative;background:#111;}
@@ -228,7 +235,11 @@ fieldset{border:0;margin:0;padding:0}
   .foot{padding-bottom:24px}
   .contact-bar{bottom:0}
   .hero,.page-head{padding-left:24px;padding-right:24px;border-radius:0 0 14px 14px}
-  .hero .search-card{max-width:640px}
+  .hero .search-card{max-width:none}
+  .vpick{display:grid!important;grid-template-columns:1fr 2fr;gap:10px}
+  .fx .chips{display:none}
+  .fx-fields,.fx-fields:not(:has(.show)){display:grid;grid-template-columns:repeat(5,1fr)}
+  .fx-fields>[data-f]{display:flex;grid-column:auto}
   .hero h1{font-size:44px}
   .sec,.wrap{padding-left:24px;padding-right:24px}
   .cards{grid-template-columns:1fr 1fr 1fr}

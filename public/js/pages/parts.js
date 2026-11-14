@@ -1,5 +1,5 @@
 import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy, partUrl, canonical, getTypes } from '../core.js';
-import { typeSuggest, matchTypes, icon, vehiclePicker, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, antiSpam } from '../components.js';
+import { typeSuggest, matchTypes, icon, vehiclePicker, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, antiSpam, filterFields, bindFilters, hasFilters } from '../components.js';
 
 // Lista dijelova; /dijelovi?make=&model=&gen=&q=&city=&sort=
 export async function partsPage({ el, query, params }) {
@@ -18,9 +18,9 @@ export async function partsPage({ el, query, params }) {
     <form id="pf" class="stack" style="gap:10px" role="search">
       <div id="pp" class="stack" style="gap:10px"></div>
       <label class="f"><span>Dio ili kataloški broj</span><input name="q" value="${q.q || ''}" placeholder="far, branik, 5G0941005…" autocomplete="off"></label><input type="hidden" name="type" value="${q.type || ''}">
-      <label class="f"><span>Grad</span>${await citySelect('city', q.city)}</label>
+      ${await filterFields(q)}
       <button class="btn accent big block">${icon('search', 20)} Pretraži</button>
-      ${q.make || q.q || q.city || q.sort ? html`<a href="/dijelovi" class="reset-link">Poništi pretragu</a>` : ''}
+      ${q.make || q.q || hasFilters(q) || q.sort ? html`<a href="/dijelovi" class="reset-link">Poništi pretragu</a>` : ''}
     </form>
   </section>
   <div class="wrap">
@@ -33,10 +33,11 @@ export async function partsPage({ el, query, params }) {
   </div>`);
 
   const picker = await vehiclePicker($('#pp', el), { make: q.make, model: q.model, gen: q.gen });
+  const filters = bindFilters($('#pf', el), $('#pp', el), picker, q);
   const search = () => {
     const v = picker.get();
     const f = formData($('#pf', el));
-    go('/dijelovi' + qs({ make: v.make, model: v.model, gen: v.gen, q: f.q.trim(), type: f.type, city: f.city, sort: $('#ps', el).value }));
+    go('/dijelovi' + qs({ make: v.make, model: v.model, gen: v.gen, q: f.q.trim(), type: f.type, ...filters(), sort: $('#ps', el).value }));
   };
   typeSuggest($('#pf input[name=q]', el), $('#pf input[name=type]', el), () => search());
   $('#pf', el).onsubmit = e => { e.preventDefault(); search(); };
@@ -82,7 +83,7 @@ export async function partPage({ el, params }) {
         <div class="price">${km(p.price)} ${p.negotiable ? html`<small>· po dogovoru</small>` : ''}</div>
         <dl class="facts">
           ${[['Stanje', p.condition], ['Godište', p.year], ['Motor', p.engine], ['Snaga', p.power_kw ? p.power_kw + ' kW' : null], ['Kod motora', p.engine_code], ['Gorivo', p.fuel],
-            ['Mjenjač', p.gearbox], ['Broj brzina', p.gears], ['Kod mjenjača', p.gearbox_code], ['Strana', p.side], ['Boja', p.color], ['Kod boje', p.color_code], ['Kataloški broj', p.part_no], ['Lokacija', p.city], ['Objavljeno', ago(p.created_at)]]
+            ['Mjenjač', p.gearbox], ['Broj brzina', p.gears], ['Kod mjenjača', p.gearbox_code], ['Karoserija', p.body], ['Pogon', p.drive], ['Strana', p.side], ['Boja', p.color], ['Kod boje', p.color_code], ['Kataloški broj', p.part_no], ['Lokacija', p.city], ['Objavljeno', ago(p.created_at)]]
             .filter(x => x[1]).map(([a, b]) => html`<div><dt>${a}</dt><dd>${b}</dd></div>`)}
         </dl>
         ${p.description ? html`<div class="desc">${p.description}</div>` : ''}

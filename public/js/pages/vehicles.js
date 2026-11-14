@@ -1,6 +1,6 @@
 import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, getMeta } from '../core.js';
 import { vehicleUrl, canonical } from '../core.js';
-import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES, antiSpam } from '../components.js';
+import { icon, vehiclePicker, vehicleCard, vehicleRow, partRow, citySelect, pagedList, gallery, bindGallery, contactButtons, sellerBlock, modal, confirmBox, engineSelect, optSelect, BODIES, DRIVES, GEARBOXES, antiSpam, filterFields, bindFilters, hasFilters } from '../components.js';
 import { inquiryModal, share, reportModal } from './parts.js';
 
 // Vozila za dijelove — filter i lista (nacrt 5)
@@ -12,32 +12,10 @@ export async function vehiclesPage({ el, query: q }) {
     <div class="row"><a href="/" class="icon-btn" aria-label="Nazad">${icon('back', 22, '#fff')}</a><h1>Vozila za dijelove</h1></div>
     <form id="vf" class="stack" style="gap:10px" role="search">
       <div id="vp" class="stack" style="gap:10px"></div>
-      <div class="chips" id="chips">
-        <button type="button" class="chip ${q.fuel ? 'on' : ''}" data-x="fuel">Gorivo${q.fuel ? ': ' + q.fuel : ''}</button>
-        <button type="button" class="chip ${q.from || q.to ? 'on' : ''}" data-x="year">Godište${q.from || q.to ? `: ${q.from || ''}–${q.to || ''}` : ''}</button>
-        <button type="button" class="chip ${q.city ? 'on' : ''}" data-x="city">Grad${q.city ? ': ' + q.city : ''}</button>
-        <button type="button" class="chip ${q.engine ? 'on' : ''}" data-x="engine">Motor${q.engine ? ': ' + q.engine : ''}</button>
-        <button type="button" class="chip ${q.body ? 'on' : ''}" data-x="body">Karoserija${q.body ? ': ' + q.body : ''}</button>
-        <button type="button" class="chip ${q.drive ? 'on' : ''}" data-x="drive">Pogon${q.drive ? ': ' + q.drive : ''}</button>
-        <button type="button" class="chip ${q.gearbox ? 'on' : ''}" data-x="gearbox">Mjenjač${q.gearbox ? ': ' + q.gearbox : ''}</button>
-        <button type="button" class="chip ${q.color ? 'on' : ''}" data-x="color">Boja${q.color ? ': ' + q.color : ''}</button>
-      </div>
-      <div id="xf" class="stack" style="gap:10px" hidden>
-        <label class="f" data-f="fuel" hidden><span>Gorivo</span><select name="fuel"><option value="">Svejedno</option>${meta.fuels.map(f => html`<option ${q.fuel === f ? raw('selected') : ''}>${f}</option>`)}</select></label>
-        <div class="grid2" data-f="year" hidden>
-          <label class="f"><span>Godište od</span><select name="from"></select></label>
-          <label class="f"><span>do</span><select name="to"></select></label>
-        </div>
-        <label class="f" data-f="city" hidden><span>Grad</span>${await citySelect('city', q.city)}</label>
-        <label class="f" data-f="engine" hidden><span>Motor</span>${engineSelect('engine', q.engine, 'Svi')}</label>
-        <label class="f" data-f="body" hidden><span>Karoserija</span>${optSelect('body', BODIES, q.body, 'Sve')}</label>
-        <label class="f" data-f="drive" hidden><span>Pogon</span>${optSelect('drive', DRIVES, q.drive, 'Svejedno')}</label>
-        <label class="f" data-f="color" hidden><span>Boja</span>${optSelect('color', meta.colors, q.color, 'Sve')}</label>
-        <label class="f" data-f="gearbox" hidden><span>Mjenjač</span>${optSelect('gearbox', GEARBOXES, q.gearbox, 'Svejedno')}</label>
-      </div>
+      ${await filterFields(q)}
       <input type="hidden" name="sort" value="${q.sort || ''}">
       <button class="btn accent big block">${icon('search', 20)} Prikaži vozila</button>
-      ${q.make || q.fuel || q.from || q.to || q.city || q.engine || q.body || q.drive || q.gearbox || q.color || q.sort ? html`<a href="/vozila" class="reset-link">Poništi pretragu</a>` : ''}
+      ${q.make || hasFilters(q) || q.sort ? html`<a href="/vozila" class="reset-link">Poništi pretragu</a>` : ''}
     </form>
   </section>
   <div class="wrap">
@@ -49,35 +27,13 @@ export async function vehiclesPage({ el, query: q }) {
   </div>`);
 
   const picker = await vehiclePicker($('#vp', el), { make: q.make, model: q.model, gen: q.gen });
-  // godište od/do: samo godine izabranog modela/generacije
-  const yFrom = $('#vf select[name=from]', el), yTo = $('#vf select[name=to]', el);
-  let curFrom = q.from || '', curTo = q.to || '';
-  const drawYears = () => {
-    const v = picker.get();
-    const a = v.yearFrom || 1970, b = Math.min(v.yearTo || new Date().getFullYear(), new Date().getFullYear());
-    const ys = []; for (let y = b; y >= a; y--) ys.push(String(y));
-    if (!ys.includes(curFrom)) curFrom = '';
-    if (!ys.includes(curTo)) curTo = '';
-    yFrom.innerHTML = html`<option value="">—</option>${ys.map(y => html`<option ${y === curFrom ? raw('selected') : ''}>${y}</option>`)}`.s;
-    yTo.innerHTML = html`<option value="">—</option>${ys.map(y => html`<option ${y === curTo ? raw('selected') : ''}>${y}</option>`)}`.s;
-  };
-  yFrom.onchange = () => { curFrom = yFrom.value; };
-  yTo.onchange = () => { curTo = yTo.value; };
-  $('#vp', el).addEventListener('pick', drawYears);
-  drawYears();
+  const filters = bindFilters($('#vf', el), $('#vp', el), picker, q);
   // ako je model izabran, odmah prikaži (kao u nacrtu: izabereš Golf 6 → svi Golf 6)
   $('#vp', el).addEventListener('pick', () => { const v = picker.get(); if (v.model) submit(); });
-  $$('#chips .chip', el).forEach(c => {
-    c.onclick = () => {
-      $('#xf', el).hidden = false;
-      $$('[data-f]', el).forEach(x => { x.hidden = x.dataset.f !== c.dataset.x; });
-      $(`[data-f="${c.dataset.x}"] select, [data-f="${c.dataset.x}"] input`, el)?.focus();
-    };
-  });
   const submit = () => {
     const v = picker.get();
     const f = formData($('#vf', el));
-    go('/vozila' + qs({ make: v.make, model: v.model, gen: v.gen, fuel: f.fuel, from: f.from, to: f.to, city: f.city, engine: f.engine, body: f.body, drive: f.drive, gearbox: f.gearbox, color: f.color, sort: $('#vs', el).value }), true);
+    go('/vozila' + qs({ make: v.make, model: v.model, gen: v.gen, ...filters(), sort: $('#vs', el).value }), true);
   };
   $('#vf', el).onsubmit = e => { e.preventDefault(); submit(); };
   $('#vs', el).onchange = submit;

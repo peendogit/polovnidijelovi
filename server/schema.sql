@@ -97,6 +97,8 @@ CREATE TABLE IF NOT EXISTS parts (
   gearbox TEXT,          -- manuelni | automatik
   gearbox_code TEXT,
   gears INTEGER,         -- 4–9
+  body TEXT,
+  drive TEXT,
   part_no TEXT,          -- kataloški / OEM broj
   side TEXT,             -- lijevo / desno / prednje / zadnje
   color TEXT,

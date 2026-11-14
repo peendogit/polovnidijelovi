@@ -161,4 +161,9 @@ export const COLORS = [...COLOR_LIST.sort((a, b) => a.localeCompare(b, 'bs')), '
 export const upper = (v, max) => { const s = str(v, max); return s ? s.toUpperCase() : null; };
 // mjenjač: samo 'manuelni' ili 'automatik' (DSG, tiptronic… = automatik)
 export const gearboxKind = v => { const s = String(v || '').toLowerCase(); return /auto|dsg|tiptr|cvt|steptr|s.?tronic|dct/.test(s) ? 'automatik' : /manu|ru[cč]n/.test(s) ? 'manuelni' : null; };
+// karoserija i pogon: isti nazivi svuda (shop šalje npr. 'Hatchback', 'Coupe', 'Van')
+export const BODIES = ['limuzina', 'hečbek', 'karavan', 'SUV', 'kupe', 'kabrio', 'monovolumen', 'kombi', 'pickup'];
+const BODY_MAP = { hatchback: 'hečbek', hecbek: 'hečbek', sedan: 'limuzina', limousine: 'limuzina', caravan: 'karavan', kombi: 'kombi', van: 'kombi', coupe: 'kupe', 'coupé': 'kupe', kabriolet: 'kabrio', cabrio: 'kabrio', cabriolet: 'kabrio', suv: 'SUV', dzip: 'SUV', 'džip': 'SUV', minivan: 'monovolumen', mpv: 'monovolumen', 'pick-up': 'pickup' };
+export const bodyKind = v => { const s = String(v || '').trim().toLowerCase(); if (!s) return null; return BODY_MAP[s] || BODIES.find(b => b.toLowerCase() === s) || null; };
+export const driveKind = v => { const s = String(v || '').trim().toLowerCase(); return ['prednji', 'zadnji', '4x4'].includes(s) ? s : /awd|4wd|4x4|quattro|4motion|xdrive/.test(s) ? '4x4' : /fwd/.test(s) ? 'prednji' : /rwd/.test(s) ? 'zadnji' : null; };
 export const gearsInt = v => { const n = int(v); return n >= 4 && n <= 9 ? n : null; };

@@ -211,6 +211,7 @@ export async function vehiclePicker(box, value = {}, opts = {}) {
   const makes = await getMakes();
   const pop = makes.filter(m => m.popular);
   const id = Math.random().toString(36).slice(2, 7);
+  box.classList.add('vpick');
   render(box, html`
     <label class="f ${opts.genRequired ? 'req' : ''}"><span>Marka</span>
       <select id="mk${id}" name="${opts.names?.make || ''}"><option value="">${opts.anyText || 'Sve marke'}</option>
@@ -636,4 +637,54 @@ export async function typeSuggest(input, hidden, onPick) {
   });
   box.addEventListener('mousedown', e => e.preventDefault());
   box.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b) pick(list[Number(b.dataset.i)]); });
+}
+
+// ---------- dodatni filteri: gorivo, godište, grad, motor, karoserija, pogon, mjenjač, boja ----------
+// Isti na početnoj, dijelovima i vozilima. Telefon: dugmići (klik otvori polje). Računar: sva polja odmah vidljiva.
+export const FILTER_KEYS = ['fuel', 'from', 'to', 'city', 'engine', 'body', 'drive', 'gearbox', 'color'];
+export const hasFilters = q => FILTER_KEYS.some(k => q[k]);
+export async function filterFields(q = {}, light = false) {
+  const meta = await getMeta();
+  const yr = q.from || q.to ? `${q.from || ''}–${q.to || ''}` : '';
+  const chips = [['fuel', 'Gorivo', q.fuel], ['year', 'Godište', yr], ['city', 'Grad', q.city], ['engine', 'Motor', q.engine], ['body', 'Karoserija', q.body],
+    ['drive', 'Pogon', q.drive], ['gearbox', 'Mjenjač', q.gearbox], ['color', 'Boja', q.color]];
+  return html`<div class="fx">
+    <div class="chips">${chips.map(([x, label, val]) => html`<button type="button" class="chip ${light ? 'light' : ''} ${val ? 'on' : ''}" data-x="${x}">${label}${val ? ': ' + val : ''}</button>`)}</div>
+    <div class="fx-fields">
+      <label class="f" data-f="fuel"><span>Gorivo</span><select name="fuel"><option value="">Svejedno</option>${meta.fuels.map(f => html`<option ${q.fuel === f ? raw('selected') : ''}>${f}</option>`)}</select></label>
+      <label class="f" data-f="year"><span>Godište od</span><select name="from"></select></label>
+      <label class="f" data-f="year"><span>Godište do</span><select name="to"></select></label>
+      <label class="f" data-f="city"><span>Grad</span>${await citySelect('city', q.city)}</label>
+      <label class="f" data-f="engine"><span>Motor</span>${engineSelect('engine', q.engine, 'Svi')}</label>
+      <label class="f" data-f="body"><span>Karoserija</span>${optSelect('body', BODIES, q.body, 'Sve')}</label>
+      <label class="f" data-f="drive"><span>Pogon</span>${optSelect('drive', DRIVES, q.drive, 'Svejedno')}</label>
+      <label class="f" data-f="gearbox"><span>Mjenjač</span>${optSelect('gearbox', GEARBOXES, q.gearbox, 'Svejedno')}</label>
+      <label class="f" data-f="color"><span>Boja</span>${optSelect('color', meta.colors, q.color, 'Sve')}</label>
+    </div></div>`;
+}
+// box: element u kojem je filterFields; pickerBox + picker: izbor vozila (godine idu po izabranoj generaciji)
+export function bindFilters(box, pickerBox, picker, q = {}) {
+  $$('.fx .chip', box).forEach(c => {
+    c.onclick = () => {
+      $$('.fx-fields [data-f]', box).forEach(x => x.classList.toggle('show', x.dataset.f === c.dataset.x));
+      $(`.fx-fields [data-f="${c.dataset.x}"] select`, box)?.focus();
+    };
+  });
+  const yFrom = $('.fx select[name=from]', box), yTo = $('.fx select[name=to]', box);
+  let curFrom = q.from || '', curTo = q.to || '';
+  const draw = () => {
+    const v = picker.get();
+    const a = v.yearFrom || 1970, b = Math.min(v.yearTo || THIS_YEAR, THIS_YEAR);
+    const ys = []; for (let y = b; y >= a; y--) ys.push(String(y));
+    if (!ys.includes(curFrom)) curFrom = '';
+    if (!ys.includes(curTo)) curTo = '';
+    yFrom.innerHTML = html`<option value="">—</option>${ys.map(y => html`<option ${y === curFrom ? raw('selected') : ''}>${y}</option>`)}`.s;
+    yTo.innerHTML = html`<option value="">—</option>${ys.map(y => html`<option ${y === curTo ? raw('selected') : ''}>${y}</option>`)}`.s;
+  };
+  yFrom.onchange = () => { curFrom = yFrom.value; };
+  yTo.onchange = () => { curTo = yTo.value; };
+  pickerBox.addEventListener('pick', draw);
+  draw();
+  // vrijednosti filtera za link
+  return () => Object.fromEntries(FILTER_KEYS.map(k => [k, $(`.fx [name=${k}]`, box)?.value || undefined]));
 }

@@ -30,7 +30,7 @@ export async function partFormPage({ el, params, query }) {
   const myVeh = state.user.type === 'otpad' ? (await api('/api/my/vehicles?status=active')).items : [];
   const p = edit || {};
   const preV = query.vozilo ? myVeh.find(v => String(v.id) === String(query.vozilo)) : null;
-  const src = edit || preV || (query.make ? { make_id: query.make, model_name: query.model, model_id: query.gen, year: query.year, engine: query.engine, fuel: query.fuel, power_kw: query.kw, engine_code: query.ecode, gearbox: query.gearbox, gears: query.gears, gearbox_code: query.gcode } : {});
+  const src = edit || preV || (query.make ? { make_id: query.make, model_name: query.model, model_id: query.gen, year: query.year, engine: query.engine, fuel: query.fuel, power_kw: query.kw, engine_code: query.ecode, gearbox: query.gearbox, gears: query.gears, gearbox_code: query.gcode, body: query.body, drive: query.drive } : {});
   setTitle(edit ? 'Uredi dio' : 'Objavi dio');
   render(el, html`
   <section class="page-head"><div class="row"><a href="${edit ? '/dio/' + p.id : '/objavi'}" class="icon-btn" aria-label="Nazad">${icon('back', 22, '#fff')}</a><h1>${edit ? 'Uredi dio' : 'Objavi dio'}</h1></div></section>
@@ -56,6 +56,10 @@ export async function partFormPage({ el, params, query }) {
         <label class="f"><span>Mjenjač</span>${optSelect('gearbox', GEARBOXES, gbKind(src.gearbox))}</label>
         <label class="f"><span>Broj brzina</span>${optSelect('gears', ['4', '5', '6', '7', '8', '9'], src.gears ? String(src.gears) : '')}</label>
         <label class="f"><span>Kod mjenjača</span><input name="gearbox_code" class="caps" value="${src.gearbox_code || ''}" placeholder="JCR" autocapitalize="characters" autocomplete="off"></label>
+      </div>
+      <div class="grid2">
+        <label class="f"><span>Karoserija</span>${optSelect('body', BODIES, src.body)}</label>
+        <label class="f"><span>Pogon</span>${optSelect('drive', DRIVES, src.drive)}</label>
       </div>
     </div>
     <div class="card stack">
@@ -97,6 +101,7 @@ export async function partFormPage({ el, params, query }) {
     f.power_kw.value = v.power_kw || ''; f.engine_code.value = v.engine_code || '';
     f.gearbox.value = gbKind(v.gearbox);
     f.gears.value = v.gears ? String(v.gears) : ''; f.gearbox_code.value = v.gearbox_code || '';
+    f.body.value = v.body || ''; f.drive.value = v.drive || '';
     if (v.model_text) { $('#mtxt', el).hidden = false; f.model_text.value = v.model_text; }
   });
 
@@ -115,7 +120,7 @@ export async function partFormPage({ el, params, query }) {
       const r = edit ? await api('/api/parts/' + p.id, { method: 'PUT', body }) : await api('/api/parts', { body });
       toast(edit ? 'Sačuvano' : 'Dio objavljen');
       if (b?.name === 'next') {
-        go('/objavi/dio' + qs({ vozilo: f.vehicle_id, make: v.make, model: v.model, gen: v.gen, year: f.year, engine: f.engine, fuel: f.fuel, kw: f.power_kw, ecode: f.engine_code, gearbox: f.gearbox, gears: f.gears, gcode: f.gearbox_code }), true);
+        go('/objavi/dio' + qs({ vozilo: f.vehicle_id, make: v.make, model: v.model, gen: v.gen, year: f.year, engine: f.engine, fuel: f.fuel, kw: f.power_kw, ecode: f.engine_code, gearbox: f.gearbox, gears: f.gears, gcode: f.gearbox_code, body: f.body, drive: f.drive }), true);
       } else go(partUrl({ id: r.id, title: f.title, model_name: v.model, model_text: f.model_text, part_no: f.part_no }), true);
     } catch (err) { fail(err); busy(b, false); }
   };
