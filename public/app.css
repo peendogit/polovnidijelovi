@@ -443,3 +443,7 @@ details summary{cursor:pointer}
 .my-req.closed .t{color:var(--muted)}
 .offers-line{display:flex;align-items:center;gap:6px;margin-top:2px;font-size:14px}
 @media (min-width:760px){.seg{max-width:520px}}
+
+.priv-sum{padding:10px 12px}
+.ps-line{display:flex;align-items:center;gap:8px;font-size:14px}
+.ps-line span{flex:1;min-width:0}

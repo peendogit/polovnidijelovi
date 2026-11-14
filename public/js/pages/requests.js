@@ -135,12 +135,17 @@ export async function requestPage({ el, params }) {
       ${!r.mine && r.trade && !r.buyer_phone ? html`<p class="hint" style="margin:10px 0 0">${icon('lock', 14)} Kupac nije podijelio broj — pošalji ponudu, on će te nazvati.</p>` : ''}
       ${!r.mine && !r.trade ? html`<p class="hint" style="margin:10px 0 0">${icon('lock', 14)} Ime i broj kupca vide samo registrovani otpadi. ${u ? '' : html`<a href="/prijava?next=/trazim/${r.id}">Prijavi se</a> da pošalješ ponudu.`}</p>` : ''}
     </div>
-    ${r.mine ? html`<div class="card stack" id="priv">
+    ${r.mine ? html`<div class="card priv-sum">
+      <div class="ps-line">${icon('lock', 18)}<span><strong>${r.visibility === 'public' ? 'Javan' : 'Samo otpadi'}</strong> · ${r.show_phone ? 'otpadi vide tvoj broj' : 'broj je skriven'}${r.user_id !== state.user?.id ? ' · (admin)' : ''}</span>
+        <button type="button" class="btn line sm" id="privEdit">${icon('edit', 16)} Uredi</button></div>
+    </div>
+    <div class="card stack" id="priv" hidden>
       <strong>${icon('lock', 18)} Privatnost zahtjeva</strong>
       <label class="radio-row"><input type="radio" name="visibility" value="otpadi" ${r.visibility !== 'public' ? raw('checked') : ''}><span><strong>Samo otpadi</strong><br><small>Vide ga samo registrovani otpadi.</small></span></label>
       <label class="radio-row"><input type="radio" name="visibility" value="public" ${r.visibility === 'public' ? raw('checked') : ''}><span><strong>Svi posjetioci</strong><br><small>Javan, bez tvog imena i broja.</small></span></label>
       <label class="check"><input type="checkbox" name="show_phone" ${r.show_phone ? raw('checked') : ''}> Otpadi mogu vidjeti moj broj i nazvati me</label>
-      <span class="hint">Ponude i cijene uvijek vidiš samo ti.</span>
+      <span class="hint">Ponude i cijene uvijek vidiš samo ti. Promjene se čuvaju odmah.</span>
+      <button type="button" class="btn dark block" id="privDone">Gotovo</button>
     </div>` : ''}
     ${r.mine ? html`
       <div class="sec-h" style="margin-top:6px"><h2>Ponude (${r.offers.length})</h2></div>
@@ -173,10 +178,12 @@ export async function requestPage({ el, params }) {
     </form>` : ''}
   </div>`);
   bindGallery(el, r.images);
+  $('#privEdit', el)?.addEventListener('click', () => { $('#priv', el).hidden = false; $('.priv-sum', el).hidden = true; });
   $('#priv', el)?.addEventListener('change', async () => {
     const box = $('#priv', el);
     try { await api(`/api/requests/${r.id}/privacy`, { body: { visibility: box.querySelector('[name=visibility]:checked').value, show_phone: box.querySelector('[name=show_phone]').checked } }); toast('Sačuvano'); } catch (e) { fail(e); }
   });
+  $('#privDone', el)?.addEventListener('click', () => requestPage({ el, params }));
   $('#close', el)?.addEventListener('click', async () => {
     try { await api(`/api/requests/${r.id}/close`, { body: {} }); toast('Sačuvano'); requestPage({ el, params }); } catch (e) { fail(e); }
   });
