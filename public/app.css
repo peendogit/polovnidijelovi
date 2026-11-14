@@ -227,6 +227,9 @@ fieldset{border:0;margin:0;padding:0}
 .imgs .im .rm{position:absolute;top:2px;right:2px;width:32px;height:32px;border-radius:16px;border:0;background:rgba(0,0,0,.7);color:#fff;font-size:18px;line-height:1;cursor:pointer}
 .imgs .im .main{position:absolute;left:4px;bottom:4px}
 .imgs .im.busy::after{content:"…";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.6);font-weight:700}
+.imgs .add.cam{border-style:solid;border-color:var(--accent);background:#FFF8DD;color:var(--dark)}
+.imgs .t-mouse{display:none}
+@media (hover:hover) and (pointer:fine){.imgs .add.cam,.imgs .t-touch{display:none}.imgs .t-mouse{display:inline}.imgs{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}}
 .imgs .add{aspect-ratio:1;border:2px dashed var(--line2);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);background:#fff}
 
 /* ---------- tabovi ---------- */

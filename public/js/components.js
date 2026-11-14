@@ -22,6 +22,7 @@ const P = {
   lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   check: '<path d="M20 6L9 17l-5-5"/>',
   x: '<path d="M18 6L6 18M6 6l12 12"/>',
+  image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
   camera: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
@@ -489,19 +490,21 @@ export function imageInput(box, images = [], max = 12) {
         <button type="button" class="rm" data-rm="${i}" aria-label="Ukloni sliku">×</button>
         ${i === 0 ? html`<span class="badge acc main">Glavna</span>` : html`<button type="button" class="badge main" data-first="${i}" style="border:0;cursor:pointer">Glavna?</button>`}</div>`)}
       ${Array.from({ length: pending }, () => html`<div class="im busy"></div>`)}
-      ${list.length + pending < max ? html`<label class="add">${icon('camera', 24)}<span>Dodaj slike</span><input type="file" accept="image/*" multiple class="sr"></label>` : ''}
+      ${list.length + pending < max ? html`<label class="add cam">${icon('camera', 24)}<span>Slikaj</span><input type="file" accept="image/*" capture="environment" class="sr"></label>
+        <label class="add">${icon('image', 24)}<span class="t-touch">Iz galerije</span><span class="t-mouse">Dodaj slike</span><input type="file" accept="image/*" multiple class="sr"></label>` : ''}
     </div><div class="hint" style="margin-top:6px">Do ${max} slika. Prva slika je glavna.</div>`);
     $$('[data-rm]', box).forEach(b => { b.onclick = () => { list.splice(Number(b.dataset.rm), 1); draw(); }; });
     $$('[data-first]', box).forEach(b => { b.onclick = () => { const [x] = list.splice(Number(b.dataset.first), 1); list.unshift(x); draw(); }; });
-    const inp = $('input[type=file]', box);
-    if (inp) inp.onchange = async () => {
-      const files = [...inp.files].slice(0, max - list.length - pending);
-      pending += files.length; draw();
-      for (const f of files) {
-        try { list.push(await uploadFile(f)); } catch (e) { fail(e); }
-        pending--; draw();
-      }
-    };
+    $$('input[type=file]', box).forEach(inp => {
+      inp.onchange = async () => {
+        const files = [...inp.files].slice(0, max - list.length - pending);
+        pending += files.length; draw();
+        for (const f of files) {
+          try { list.push(await uploadFile(f)); } catch (e) { fail(e); }
+          pending--; draw();
+        }
+      };
+    });
   };
   draw();
   return { get: () => list, busy: () => pending > 0 };
