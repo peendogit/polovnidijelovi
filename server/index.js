@@ -154,7 +154,12 @@ server.headersTimeout = 20e3;
 
 server.listen(PORT, '127.0.0.1', () => console.log(`polovnidijelovi radi na http://127.0.0.1:${PORT}`));
 
-// čišćenje: zahtjevi stariji od 60 dana se zatvaraju
-setInterval(() => {
-  run("UPDATE requests SET status='closed' WHERE status='open' AND created_at < datetime('now','-60 days')");
-}, 6 * 3600e3).unref();
+// čišćenje: "Tražim dio" ističe posle 15 dana i briše se (sa ponudama)
+const cleanRequests = () => {
+  try {
+    run("DELETE FROM offers WHERE request_id IN (SELECT id FROM requests WHERE created_at < datetime('now','-15 days'))");
+    run("DELETE FROM requests WHERE created_at < datetime('now','-15 days')");
+  } catch (e) { console.error('čišćenje zahtjeva', e.message); }
+};
+cleanRequests();
+setInterval(cleanRequests, 3600e3).unref();

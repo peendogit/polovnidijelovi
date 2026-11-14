@@ -56,6 +56,8 @@ app.get('/api/requests/:id', ({ params, user }) => {
   }
   const out = publicReq(fmtVehicleRow(r), user);
   out.mine = !!mine;
+  out.own = !!user && user.id === r.user_id;
+  out.expires_at = get("SELECT datetime(?, '+15 days') d", r.created_at).d;
   out.trade = isTrade(user);
   // telefon kupca vide samo otpadi, i to samo ako je kupac dozvolio
   if (!mine && !(isTrade(user) && r.show_phone)) { delete out.buyer_phone; delete out.buyer_viber; delete out.buyer_whatsapp; }
@@ -89,7 +91,7 @@ app.post('/api/requests', ({ user, body }) => {
 app.post('/api/requests/:id/close', ({ user, params }) => {
   const r = get('SELECT * FROM requests WHERE id=?', int(params.id));
   if (!r) throw notFound();
-  if (r.user_id !== user.id && !user.is_admin) throw forbidden();
+  if (r.user_id !== user.id) throw forbidden();
   run("UPDATE requests SET status=? WHERE id=?", r.status === 'open' ? 'closed' : 'open', r.id);
   return { ok: true };
 }, { auth: true });

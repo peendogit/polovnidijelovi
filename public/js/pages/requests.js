@@ -53,6 +53,13 @@ export async function requestsPage({ el, query: q }) {
   if (otpad && state.counts.requests) { api('/api/requests/seen', { body: {} }).then(loadMe).catch(() => {}); }
 }
 
+// zahtjev važi 15 dana od objave, pa se briše
+export function expiresText(created) {
+  const end = Date.parse(String(created).replace(' ', 'T') + 'Z') + 15 * 864e5;
+  const d = Math.ceil((end - Date.now()) / 864e5);
+  return d <= 1 ? 'Ističe danas — tada se briše sa ponudama' : `Ističe za ${d} ${d % 10 === 1 && d !== 11 ? 'dan' : 'dana'}`;
+}
+
 // moj zahtjev: status, broj ponuda i nove ponude
 function myRequestRow(r) {
   const closed = r.status !== 'open';
@@ -61,7 +68,7 @@ function myRequestRow(r) {
     <div class="info">
       <span class="t">${r.part}</span>
       <span class="s">${[r.vehicle || r.model_text, r.year].filter(Boolean).join(' · ')}</span>
-      <span class="s">${closed ? 'Zatvoren' : 'Otvoren'} · ${r.visibility === 'public' ? 'javan' : 'samo otpadi'} · ${ago(r.created_at)}</span>
+      <span class="s">${closed ? 'Zatvoren' : 'Otvoren'} · ${r.visibility === 'public' ? 'javan' : 'samo otpadi'} · ${expiresText(r.created_at).toLowerCase()}</span>
       <span class="offers-line">${r.offers ? html`<strong>${r.offers} ${r.offers === 1 ? 'ponuda' : 'ponuda'}</strong>` : html`<span class="hint">Još nema ponuda</span>`}${r.new_offers ? html` <span class="num">${r.new_offers} nova</span>` : ''}</span>
     </div>
     ${icon('right', 20, '#5A616B')}
@@ -96,6 +103,7 @@ export async function newRequestPage({ el, query: q }) {
       <label class="check"><input type="checkbox" name="show_phone" checked> Otpadi mogu vidjeti moj broj (${state.user.phone}) i nazvati me</label>
       <span class="hint">Ponude, cijene i ko ti je ponudio vidiš samo ti. Ime i broj nikad nisu javni.</span>
     </div>
+    <p class="hint" style="margin:0;text-align:center">${icon('clock', 14)} Zahtjev važi 15 dana, pa se sam briše zajedno sa ponudama.</p>
     <button class="btn accent big block">${icon('send', 20)} Objavi zahtjev</button>
   </form>`);
   const picker = await vehiclePicker($('#np', el), { make: q.make, model: q.model, gen: q.gen }, { anyText: 'Izaberi marku' });
@@ -131,6 +139,7 @@ export async function requestPage({ el, params }) {
       ${r.description ? html`<div class="desc" style="margin-bottom:10px">${r.description}</div>` : ''}
       ${r.images?.length ? html`<div style="margin-bottom:10px">${gallery(r.images, r.part)}</div>` : ''}
       <div class="hint">${[r.buyer_name, r.city, ago(r.created_at)].filter(Boolean).join(' · ')}</div>
+      <div class="hint" style="margin-top:2px">${icon('clock', 14)} ${expiresText(r.created_at)}</div>
       ${!r.mine && u && r.buyer_phone ? html`<div class="btns3" style="margin-top:12px">${contactButtons({ phone: r.buyer_phone, viber: r.buyer_viber, whatsapp: r.buyer_whatsapp }, `zahtjev „${r.part}“`)}</div>` : ''}
       ${!r.mine && r.trade && !r.buyer_phone ? html`<p class="hint" style="margin:10px 0 0">${icon('lock', 14)} Kupac nije podijelio broj — pošalji ponudu, on će te nazvati.</p>` : ''}
       ${!r.mine && !r.trade ? html`<p class="hint" style="margin:10px 0 0">${icon('lock', 14)} Ime i broj kupca vide samo registrovani otpadi. ${u ? '' : html`<a href="/prijava?next=/trazim/${r.id}">Prijavi se</a> da pošalješ ponudu.`}</p>` : ''}
@@ -158,7 +167,7 @@ export async function requestPage({ el, params }) {
         ${o.part_id ? html`<a href="/dio/${o.part_id}" style="font-weight:600">Pogledaj oglas dijela →</a>` : ''}
         <div class="btns3" style="width:100%">${contactButtons({ phone: o.seller_phone, viber: o.seller_viber, whatsapp: o.seller_whatsapp }, `ponuda za „${r.part}“`)}</div>
       </div>`)}</div>` : html`<div class="empty"><strong>Još nema ponuda</strong>Otpadi su obaviješteni. Ponude će se pojaviti ovdje.</div>`}
-      <button class="btn line block" id="close">${r.status === 'open' ? 'Našao sam dio — zatvori zahtjev' : 'Ponovo otvori zahtjev'}</button>` : ''}
+      ${r.own ? html`<button class="btn line block" id="close">${r.status === 'open' ? 'Našao sam dio — zatvori zahtjev' : 'Ponovo otvori zahtjev'}</button>` : ''}` : ''}
     ${r.my_offer ? html`<div class="card offer-sent" id="ofSent">
       <div class="os-head">
         <span class="os-ok">${icon('check', 18, '#145C2B', 2.6)}</span>
