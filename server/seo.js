@@ -22,6 +22,7 @@ export const partPath = r => withSlug('/dio/', r.id, [r.title, r.model_name || r
 export const vehiclePath = r => withSlug('/vozilo/', r.id, [r.make_name, r.model_name || r.model_text, r.year].filter(Boolean).join(' '));
 
 const SITE = 'polovnidijelovi.com';
+const GSV = String(process.env.GOOGLE_SITE_VERIFICATION || '').trim().replace(/^.*content="([^"]+)".*$/, '$1');
 const DEF_DESC = 'Polovni auto dijelovi i vozila za dijelove sa otpada iz cijele BiH. Pretraga po marki, modelu i generaciji (i facelift). Objavi „Tražim dio“ i otpadi ti se javljaju sa cijenom.';
 
 function findSlug(mk, md) {
@@ -127,7 +128,10 @@ export function renderIndex(p, host = SITE, sp = null) {
     .replace(/__IMG__/g, () => esc(img))
     .replace('<!--SEO-->', () => seoList(p, sp))
     .replace(/__CANON__/g, () => esc(`https://${host}${m.canon || (p + (sp?.get('stranica') ? '?stranica=' + Number(sp.get('stranica')) : ''))}`))
-    .replace('<!--JSONLD-->', () => m.ld ? `<script type="application/ld+json">${JSON.stringify(m.ld).replace(/</g, '\\u003c')}</script>` : '');
+    .replace('<!--JSONLD-->', () => m.ld ? `<script type="application/ld+json">${JSON.stringify(m.ld).replace(/</g, '\\u003c')}</script>` : '')
+    // Google Search Console: potvrda vlasništva (kod iz .env: GOOGLE_SITE_VERIFICATION=...)
+    .replace('<!--JSONLD-->', '')
+    .replace('</head>', () => (GSV ? `<meta name="google-site-verification" content="${esc(GSV)}">\n</head>` : '</head>'));
   return { status: m.status || 200, body };
 }
 
