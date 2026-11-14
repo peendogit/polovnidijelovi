@@ -7,8 +7,8 @@ export async function loginPage({ el, query }) {
   if (state.user) return go(safeNext(query.next, '/profil'), true);
   setTitle('Prijava');
   render(el, html`
-  <section class="page-head"><div class="row"><h1 style="padding-left:12px">Prijava</h1></div></section>
-  <form class="wrap stack" id="lf" style="padding-top:16px;max-width:520px">
+  <section class="page-head center"><div class="row"><h1>Prijava</h1></div></section>
+  <form class="wrap stack" id="lf" style="padding-top:16px;max-width:520px;margin:0 auto">
     <div class="card stack">
       <label class="f"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
       <label class="f"><span>Lozinka</span><input name="password" type="password" autocomplete="current-password" required></label>
@@ -30,8 +30,8 @@ export async function registerPage({ el, query }) {
   setTitle('Registracija');
   const otpad = query.tip === 'otpad';
   render(el, html`
-  <section class="page-head"><div class="row"><h1 style="padding-left:12px">Registracija</h1></div><p class="sub">Besplatno. Traje pola minute.</p></section>
-  <form class="wrap stack" id="rf" style="padding-top:16px;max-width:520px">
+  <section class="page-head center"><div class="row"><h1>Registracija</h1></div><p class="sub">Besplatno. Traje pola minute.</p></section>
+  <form class="wrap stack" id="rf" style="padding-top:16px;max-width:520px;margin:0 auto">
     <fieldset class="seg"><legend class="sr">Vrsta naloga</legend>
       <label><input type="radio" name="type" value="privatno" ${otpad ? '' : 'checked'}><strong>Privatno lice</strong><span>Kupujem ili prodajem pokoji dio</span></label>
       <label><input type="radio" name="type" value="otpad" ${otpad ? 'checked' : ''}><strong>Auto otpad</strong><span>Prodajem dijelove i vozila</span></label>
@@ -303,8 +303,8 @@ export async function verifyPage({ el, params }) {
 
 export async function forgotPage({ el }) {
   setTitle('Zaboravljena lozinka');
-  render(el, html`<section class="page-head"><div class="row"><h1 style="padding-left:12px">Zaboravljena lozinka</h1></div><p class="sub">Poslaćemo ti link za novu lozinku.</p></section>
-  <form class="wrap stack" id="ff" style="padding-top:16px;max-width:520px"><div class="card stack">
+  render(el, html`<section class="page-head center"><div class="row"><h1>Zaboravljena lozinka</h1></div><p class="sub">Poslaćemo ti link za novu lozinku.</p></section>
+  <form class="wrap stack" id="ff" style="padding-top:16px;max-width:520px;margin:0 auto"><div class="card stack">
     <label class="f"><span>Email sa kojim si se registrovao</span><input name="email" type="email" required autocomplete="email"></label>
     <button class="btn accent big block">Pošalji link</button></div>
     <p style="text-align:center"><a href="/prijava">Nazad na prijavu</a></p></form>`);
@@ -320,8 +320,8 @@ export async function forgotPage({ el }) {
 
 export async function resetPage({ el, params }) {
   setTitle('Nova lozinka');
-  render(el, html`<section class="page-head"><div class="row"><h1 style="padding-left:12px">Nova lozinka</h1></div></section>
-  <form class="wrap stack" id="rf" style="padding-top:16px;max-width:520px"><div class="card stack">
+  render(el, html`<section class="page-head center"><div class="row"><h1>Nova lozinka</h1></div></section>
+  <form class="wrap stack" id="rf" style="padding-top:16px;max-width:520px;margin:0 auto"><div class="card stack">
     <label class="f"><span>Nova lozinka (najmanje 6 znakova)</span><input name="password" type="password" minlength="6" required autocomplete="new-password"></label>
     <button class="btn accent big block">Sačuvaj lozinku</button></div></form>`);
   $('#rf', el).onsubmit = async e => {

@@ -424,3 +424,8 @@ details summary{cursor:pointer}
 .radio-row input{margin-top:3px;accent-color:var(--dark);width:18px;height:18px;flex-shrink:0}
 .radio-row small{color:var(--muted);font-size:13px}
 .radio-row:has(input:checked){border-color:var(--accent);background:#FFF8DD}
+
+/* prijava, registracija, lozinka: sve na sredini */
+.page-head.center{text-align:center}
+.page-head.center .row{justify-content:center;margin-left:0}
+.page-head.center h1{flex:none}
