@@ -1,10 +1,13 @@
 // "Tražim dio": kupac objavi šta mu treba, otpadi šalju ponude
 import { app } from '../router.js';
 import { all, get, run } from '../db.js';
-import { bad, notFound, forbidden, str, int, num, imgList, modelById, searchWords, normalize, rateLimit } from '../lib.js';
+import crypto from 'node:crypto';
+import { bad, notFound, forbidden, str, int, num, bool, imgList, modelById, searchWords, normalize, rateLimit, hashPassword, HttpError } from '../lib.js';
+import { mailEnabled } from '../mail.js';
+import { normPhone } from './inquiries.js';
 import { vehicleFilter, MODEL_JOIN, MODEL_COLS, fmtVehicleRow, pageArgs, countAndList } from './common.js';
 
-const COLS = `r.id, r.user_id, r.part, r.visibility, r.description, r.year, r.engine, r.city, r.images, r.status, r.created_at, r.make_id, r.model_id, r.model_text,
+const COLS = `r.id, r.user_id, (u.type='gost') guest, r.part, r.visibility, r.description, r.year, r.engine, r.city, r.images, r.status, r.created_at, r.make_id, r.model_id, r.model_text,
   u.name buyer_name, ${MODEL_COLS}, (SELECT COUNT(*) FROM offers o WHERE o.request_id=r.id) offers`;
 const FROM = `FROM requests r JOIN users u ON u.id=r.user_id AND u.blocked=0 ${MODEL_JOIN('r')}`;
 
@@ -47,7 +50,7 @@ app.post('/api/requests/seen', ({ user }) => {
 }, { auth: true });
 
 app.get('/api/requests/:id', ({ params, user }) => {
-  const r = get(`SELECT r.*, u.name buyer_name, u.phone buyer_phone, u.viber buyer_viber, u.whatsapp buyer_whatsapp, ${MODEL_COLS}
+  const r = get(`SELECT r.*, u.name buyer_name, u.phone buyer_phone, u.viber buyer_viber, u.whatsapp buyer_whatsapp, (u.type='gost') guest, ${MODEL_COLS}
     FROM requests r JOIN users u ON u.id=r.user_id ${MODEL_JOIN('r')} WHERE r.id=?`, int(params.id));
   if (!r) throw notFound('Zahtjev ne postoji');
   const mine = user && (user.id === r.user_id || user.is_admin);
@@ -73,7 +76,43 @@ app.get('/api/requests/:id', ({ params, user }) => {
   return out;
 });
 
-app.post('/api/requests', ({ user, body }) => {
+// Gost (bez naloga): ostavi ime i broj; otpadi mu se javljaju na Viber, WhatsApp ili poziv.
+// Za svaki broj se napravi skriveni "gost" nalog (bez prijave), da sve ostalo radi isto.
+function guestUser(body, ip) {
+  if (body.website) return null; // robot (skriveno polje)
+  const t = Number(body.t || 0);
+  if (t && Date.now() - t < 4000) throw bad('Sačekaj sekundu pa pošalji ponovo.');
+  rateLimit('greq:' + ip, 6, 24 * 3600e3);
+  const phone = (str(body.phone, 30) || '').replace(/[^\d+]/g, '');
+  const np = normPhone(phone);
+  if (np.length < 8 || np.length > 15) throw bad('Upiši ispravan broj telefona — otpadi ti se javljaju na njega');
+  if (get("SELECT 1 x FROM blocklist WHERE (kind='phone' AND value=?) OR (kind='ip' AND value=?)", np, ip)) throw bad('Slanje sa ovog broja nije moguće.');
+  const email = `gost-${np}@gost.polovnidijelovi.com`;
+  let u = get('SELECT * FROM users WHERE email=?', email);
+  if (u?.blocked) throw bad('Slanje sa ovog broja nije moguće.');
+  if (u && get("SELECT COUNT(*) c FROM requests WHERE user_id=? AND created_at > datetime('now','-1 day')", u.id).c >= 3) {
+    throw bad('Sa ovog broja su danas već poslana 3 zahtjeva. Pokušaj sutra ili se registruj.');
+  }
+  const name = str(body.name, 80) || 'Kupac';
+  if (u) run('UPDATE users SET name=?, phone=?, viber=?, whatsapp=?, city=COALESCE(?, city) WHERE id=?', name, phone, bool(body.viber), bool(body.whatsapp), str(body.city, 60), u.id);
+  else {
+    const id = Number(run("INSERT INTO users (type, name, email, phone, viber, whatsapp, city, pass_hash, email_verified) VALUES ('gost',?,?,?,?,?,?,?,1)",
+      name, email, phone, bool(body.viber), bool(body.whatsapp), str(body.city, 60), hashPassword(crypto.randomBytes(24).toString('hex'))).lastInsertRowid);
+    u = { id };
+  }
+  return get('SELECT * FROM users WHERE id=?', u.id);
+}
+
+app.post('/api/requests', ({ user, body, ip }) => {
+  let guest = false;
+  if (!user) {
+    user = guestUser(body, ip);
+    if (!user) return { ok: true, guest: true };
+    guest = true;
+  } else {
+    if (!user.phone) { const e = new HttpError(403, 'Prvo upiši broj telefona u profilu.'); e.code = 'phone'; throw e; }
+    if (!user.email_verified && mailEnabled()) { const e = new HttpError(403, 'Prvo potvrdi email — link smo ti poslali na ' + user.email + '.'); e.code = 'verify'; throw e; }
+  }
   rateLimit('req:' + user.id, 20, 24 * 3600e3);
   const part = str(body.part, 120);
   if (!part) throw bad('Napiši koji dio tražiš');
@@ -84,9 +123,10 @@ app.post('/api/requests', ({ user, body }) => {
   const r = run(`INSERT INTO requests (user_id, make_id, model_id, model_text, year, engine, part, description, city, images, search, visibility, show_phone)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   user.id, m ? m.make_id : str(body.make_id, 60), m?.id, str(body.model_text, 80), int(body.year), str(body.engine, 40), part,
-  desc, str(body.city, 60) || user.city, imgList(body.images), search, body.visibility === 'public' ? 'public' : 'otpadi', body.show_phone === false || body.show_phone === 0 || body.show_phone === '0' ? 0 : 1);
-  return { id: Number(r.lastInsertRowid) };
-}, { auth: true, verified: true });
+  desc, str(body.city, 60) || user.city, guest ? '[]' : imgList(body.images), search,
+  guest ? 'otpadi' : (body.visibility === 'public' ? 'public' : 'otpadi'), guest || !(body.show_phone === false || body.show_phone === 0 || body.show_phone === '0') ? 1 : 0);
+  return guest ? { ok: true, guest: true } : { id: Number(r.lastInsertRowid) };
+});
 
 app.post('/api/requests/:id/close', ({ user, params }) => {
   const r = get('SELECT * FROM requests WHERE id=?', int(params.id));
@@ -120,6 +160,7 @@ app.post('/api/requests/:id/offer', ({ user, params, body }) => {
   if (r.status !== 'open') throw bad('Zahtjev je zatvoren');
   if (r.user_id === user.id) throw bad('Ne možeš ponuditi na svoj zahtjev');
   if (r.visibility !== 'public' && !isTrade(user)) throw forbidden('Na ovaj zahtjev mogu odgovoriti samo otpadi');
+  if (get('SELECT type FROM users WHERE id=?', r.user_id)?.type === 'gost') throw bad('Kupac nema nalog — javi mu se direktno na Viber, WhatsApp ili telefon.');
   if (get('SELECT blocked FROM users WHERE id=?', r.user_id)?.blocked) throw notFound();
   const price = num(body.price);
   if (price !== null && (price < 0 || price > 1e6)) throw bad('Provjeri cijenu');

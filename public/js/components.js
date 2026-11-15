@@ -138,7 +138,7 @@ export function requestRow(r) {
       <span class="t">${r.part}${r.visibility === 'otpadi' ? html` <span class="badge" title="Vide samo otpadi">${icon('lock', 12)} samo otpadi</span>` : ''}</span>
       <span class="s">${[r.vehicle || r.model_text, r.year].filter(Boolean).join(' · ')}</span>
       <span class="s">${[r.city, ago(r.created_at)].filter(Boolean).join(' · ')}${r.status === 'closed' ? ' · zatvoren' : ''}</span>
-      <span class="s" style="font-weight:700;color:var(--text)">${r.offers === undefined ? (r.my_offer != null ? '' : state.user?.type === 'otpad' ? 'Pošalji ponudu →' : 'Otpadi šalju ponude kupcu →') : r.offers ? `${r.offers} ${r.offers === 1 ? 'ponuda' : 'ponuda'}` : 'Još nema ponuda'}${r.my_offer !== undefined && r.my_offer !== null ? `${r.offers === undefined ? '' : ' · '}Tvoja ponuda: ${km(r.my_offer)}` : ''}${r.new_offers ? html` <span class="num">${r.new_offers} nova</span>` : ''}</span>
+      <span class="s" style="font-weight:700;color:var(--text)">${r.offers === undefined ? (r.my_offer != null ? '' : r.guest && state.user?.type === 'otpad' ? 'Javi se kupcu na Viber / WhatsApp →' : state.user?.type === 'otpad' ? 'Pošalji ponudu →' : 'Otpadi šalju ponude kupcu →') : r.offers ? `${r.offers} ${r.offers === 1 ? 'ponuda' : 'ponuda'}` : 'Još nema ponuda'}${r.my_offer !== undefined && r.my_offer !== null ? `${r.offers === undefined ? '' : ' · '}Tvoja ponuda: ${km(r.my_offer)}` : ''}${r.new_offers ? html` <span class="num">${r.new_offers} nova</span>` : ''}</span>
     </div>
   </a>`;
 }
@@ -148,10 +148,10 @@ export function listOr(items, fn, empty) {
 }
 
 // ---------- kontakt ----------
-export function contactButtons(s, ctx = '') {
+export function contactButtons(s, ctx = '', fullText = '') {
   if (!s?.phone) return '';
   const tel = intlPhone(s.phone);
-  const text = encodeURIComponent(ctx ? `Pozdrav, vidio sam na polovnidijelovi.com: ${ctx}` : 'Pozdrav, vidio sam oglas na polovnidijelovi.com');
+  const text = encodeURIComponent(fullText || (ctx ? `Pozdrav, vidio sam na polovnidijelovi.com: ${ctx}` : 'Pozdrav, vidio sam oglas na polovnidijelovi.com'));
   return html`<a class="btn accent" href="tel:${tel}">${icon('phone', 18)} Pozovi</a>
     ${s.viber ? html`<a class="btn viber" href="viber://chat?number=${encodeURIComponent(tel)}">${icon('chat', 18)} Viber</a>` : ''}
     ${s.whatsapp ? html`<a class="btn wa" href="https://wa.me/${tel.replace('+', '')}?text=${text}" target="_blank" rel="noopener">${icon('chat', 18)} WhatsApp</a>` : ''}`;

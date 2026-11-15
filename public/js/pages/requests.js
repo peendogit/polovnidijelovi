@@ -1,5 +1,5 @@
 import { html, raw, render, $, api, go, qs, setTitle, formData, km, ago, fail, toast, state, busy, loadMe } from '../core.js';
-import { typeSuggest, icon, vehiclePicker, requestRow, citySelect, pagedList, contactButtons, verifiedBadge, imageInput, suggestModel, confirmBox, gallery, bindGallery, bindYear, engineSelect } from '../components.js';
+import { typeSuggest, icon, vehiclePicker, requestRow, citySelect, pagedList, contactButtons, verifiedBadge, imageInput, suggestModel, confirmBox, gallery, bindGallery, bindYear, engineSelect, antiSpam } from '../components.js';
 
 export async function requestsPage({ el, query: q }) {
   setTitle('Tražim dio');
@@ -76,11 +76,11 @@ function myRequestRow(r) {
 }
 
 export async function newRequestPage({ el, query: q }) {
-  if (!state.user) return go('/prijava?next=' + encodeURIComponent(location.pathname + location.search), true);
+  const u = state.user; // gost može bez naloga: ostavi broj, otpadi mu se javljaju na Viber/WhatsApp
   setTitle('Objavi šta tražiš');
   render(el, html`
   <section class="page-head"><div class="row"><a href="/trazim" class="icon-btn" aria-label="Nazad">${icon('back', 22, '#fff')}</a><h1>Tražim dio</h1></div>
-    <p class="sub">Otpadi vide tvoj zahtjev i javljaju ti se sa cijenom. Ponude vidiš samo ti.</p></section>
+    <p class="sub">${u ? 'Otpadi vide tvoj zahtjev i javljaju ti se sa cijenom. Ponude vidiš samo ti.' : 'Bez registracije: napiši šta ti treba i ostavi broj — otpadi ti se javljaju na Viber, WhatsApp ili poziv.'}</p></section>
   <form class="wrap stack" id="nr" style="padding-top:16px">
     <div class="card stack">
       <strong>Za koje vozilo?</strong>
@@ -93,21 +93,28 @@ export async function newRequestPage({ el, query: q }) {
     <div class="card stack">
       <label class="f req"><span>Koji dio tražiš?</span><input name="part" required maxlength="120" value="${q.part || ''}" placeholder="npr. far prednji lijevi"></label>
       <label class="f"><span>Opis (nije obavezno)</span><textarea name="description" placeholder="kataloški broj, boja, stanje, da li treba slanje…"></textarea></label>
-      <label class="f"><span>Tvoj grad</span>${await citySelect('city', state.user.city, 'Izaberi grad')}</label>
-      <div><div class="f" style="margin-bottom:6px;font-size:12.5px;font-weight:600;color:var(--muted)">Slika (ako imaš — npr. naljepnica dijela)</div><div id="ni"></div></div>
+      <label class="f"><span>Tvoj grad</span>${await citySelect('city', u?.city, 'Izaberi grad')}</label>
+      ${u ? html`<div><div class="f" style="margin-bottom:6px;font-size:12.5px;font-weight:600;color:var(--muted)">Slika (ako imaš — npr. naljepnica dijela)</div><div id="ni"></div></div>` : ''}
     </div>
-    <div class="card stack">
+    ${u ? '' : html`<div class="card stack">${antiSpam()}
+      <strong>${icon('phone', 18)} Kako da ti se jave?</strong>
+      <label class="f req"><span>Broj telefona</span><input name="phone" type="tel" required autocomplete="tel" placeholder="06x xxx xxx"></label>
+      <div class="grid2"><label class="check"><input type="checkbox" name="viber" checked> Imam Viber</label><label class="check"><input type="checkbox" name="whatsapp" checked> Imam WhatsApp</label></div>
+      <label class="f"><span>Ime (nije obavezno)</span><input name="name" autocomplete="given-name" maxlength="80"></label>
+      <span class="hint">Broj vide samo registrovani otpadi, nikad javno. <a href="/registracija?next=/trazim/novi">Registruj se</a> ako želiš ponude sa cijenama na jednom mjestu.</span>
+    </div>`}
+    ${u ? html`<div class="card stack">
       <strong>${icon('lock', 18)} Privatnost</strong>
       <label class="radio-row"><input type="radio" name="visibility" value="otpadi" checked><span><strong>Samo otpadi</strong> (preporučeno)<br><small>Zahtjev vide samo registrovani otpadi. Ne pojavljuje se javno ni na Google-u.</small></span></label>
       <label class="radio-row"><input type="radio" name="visibility" value="public"><span><strong>Svi posjetioci</strong><br><small>Zahtjev je javan (bez tvog imena i broja). Može ga vidjeti više prodavaca.</small></span></label>
-      <label class="check"><input type="checkbox" name="show_phone" checked> Otpadi mogu vidjeti moj broj (${state.user.phone}) i nazvati me</label>
+      <label class="check"><input type="checkbox" name="show_phone" checked> Otpadi mogu vidjeti moj broj (${u?.phone}) i nazvati me</label>
       <span class="hint">Ponude, cijene i ko ti je ponudio vidiš samo ti. Ime i broj nikad nisu javni.</span>
-    </div>
+    </div>` : ''}
     <p class="hint" style="margin:0;text-align:center">${icon('clock', 14)} Zahtjev važi 15 dana, pa se sam briše zajedno sa ponudama.</p>
     <button class="btn accent big block">${icon('send', 20)} Objavi zahtjev</button>
   </form>`);
   const picker = await vehiclePicker($('#np', el), { make: q.make, model: q.model, gen: q.gen }, { anyText: 'Izaberi marku' });
-  const imgs = imageInput($('#ni', el), [], 3);
+  const imgs = u ? imageInput($('#ni', el), [], 3) : { busy: () => false, get: () => [] };
   typeSuggest($('input[name=part]', el), null);
   bindYear($('#np', el), picker, $('#nr select[name=year]', el), q.year);
   $('#nomodel', el).onclick = () => { $('#mtxt', el).hidden = false; const v = picker.get(); suggestModel(v.make, v.makeName); };
@@ -118,7 +125,22 @@ export async function newRequestPage({ el, query: q }) {
     if (imgs.busy()) return toast('Sačekaj da se slike učitaju', true);
     const b = e.submitter; busy(b, true, 'Objavljujem…');
     try {
-      const r = await api('/api/requests', { body: { ...f, show_phone: !!f.show_phone, make_id: v.make, model_id: v.gen || null, model_text: f.model_text || (!v.gen && v.model ? v.label : ''), images: imgs.get() } });
+      const r = await api('/api/requests', { body: { ...f, show_phone: !!f.show_phone, viber: !!f.viber, whatsapp: !!f.whatsapp, make_id: v.make, model_id: v.gen || null, model_text: f.model_text || (!v.gen && v.model ? v.label : ''), images: imgs.get() } });
+      if (r.guest) {
+        render(el, html`<section class="page-head center"><div class="row"><h1>Poslano otpadima</h1></div></section>
+          <div class="wrap stack" style="padding-top:16px;max-width:520px;margin:0 auto">
+            <div class="card stack" style="text-align:center;align-items:center">
+              <span class="os-ok" style="width:56px;height:56px">${icon('check', 30, '#145C2B', 2.6)}</span>
+              <strong style="font-size:18px">Tvoj zahtjev vide otpadi iz cijele BiH</strong>
+              <span>Javiće ti se na <strong>${f.phone}</strong>${f.viber || f.whatsapp ? ` (${[f.viber && 'Viber', f.whatsapp && 'WhatsApp'].filter(Boolean).join(', ')} ili poziv)` : ''}.</span>
+              <span class="hint">Zahtjev važi 15 dana. Ne treba ništa više da radiš.</span>
+            </div>
+            <a class="btn dark big block" href="/trazim/novi">${icon('send', 18, '#fff')} Traži još jedan dio</a>
+            <a class="btn line block" href="/registracija?next=/trazim" style="white-space:normal;height:auto;padding:10px 14px">Registruj se — sve ponude na jednom mjestu</a>
+          </div>`);
+        window.scrollTo(0, 0);
+        return;
+      }
       toast('Objavljeno! Otpadi će ti se javiti.'); go('/trazim/' + r.id, true);
     } catch (err) { fail(err); busy(b, false); }
   };
@@ -129,7 +151,7 @@ export async function requestPage({ el, params }) {
   setTitle(`Tražim: ${r.part}`);
   const u = state.user;
   // ponudu šalje svako ko nije vlasnik zahtjeva (i admin-otpad); na 'samo otpadi' samo otpadi
-  const canOffer = u && !r.own && r.status === 'open' && (r.trade || r.visibility === 'public');
+  const canOffer = u && !r.own && !r.guest && r.status === 'open' && (r.trade || r.visibility === 'public');
   render(el, html`
   <section class="page-head"><div class="row"><a href="${r.mine ? '/trazim?moji=1' : '/trazim'}" class="icon-btn" aria-label="Nazad">${icon('back', 22, '#fff')}</a><h1>Tražim dio</h1></div></section>
   <div class="wrap stack" style="padding-top:16px">
@@ -141,7 +163,8 @@ export async function requestPage({ el, params }) {
       ${r.images?.length ? html`<div style="margin-bottom:10px">${gallery(r.images, r.part)}</div>` : ''}
       <div class="hint">${[r.buyer_name, r.city, ago(r.created_at)].filter(Boolean).join(' · ')}</div>
       <div class="hint" style="margin-top:2px">${icon('clock', 14)} ${expiresText(r.created_at)}</div>
-      ${!r.own && u && r.buyer_phone ? html`<div class="btns3" style="margin-top:12px">${contactButtons({ phone: r.buyer_phone, viber: r.buyer_viber, whatsapp: r.buyer_whatsapp }, `zahtjev „${r.part}“`)}</div>` : ''}
+      ${r.guest && !r.own && r.buyer_phone ? html`<p class="hint" style="margin:12px 0 -4px">${icon('user', 14)} Kupac nema nalog — javi mu se direktno sa cijenom:</p>` : ''}
+      ${!r.own && u && r.buyer_phone ? html`<div class="btns3" style="margin-top:12px">${contactButtons({ phone: r.buyer_phone, viber: r.buyer_viber, whatsapp: r.buyer_whatsapp }, '', `Pozdrav, sa polovnidijelovi.com — vidio sam da tražite: ${r.part}${r.vehicle || r.model_text ? ' za ' + (r.vehicle || r.model_text) : ''}. Imam ga, cijena je `)}</div>` : ''}
       ${canOffer ? html`<button type="button" class="btn ${r.my_offer ? 'line' : 'dark'} big block" id="ofGo" style="margin-top:10px">${icon('send', 18, r.my_offer ? 'currentColor' : '#fff')} ${r.my_offer ? 'Izmijeni svoju ponudu' : 'Pošalji ponudu kupcu'}</button>` : ''}
       ${!r.mine && r.trade && !r.buyer_phone ? html`<p class="hint" style="margin:10px 0 0">${icon('lock', 14)} Kupac nije podijelio broj — pošalji ponudu, on će te nazvati.</p>` : ''}
       ${!r.mine && !r.trade ? html`<p class="hint" style="margin:10px 0 0">${icon('lock', 14)} Ime i broj kupca vide samo registrovani otpadi. ${u ? '' : html`<a href="/prijava?next=/trazim/${r.id}">Prijavi se</a> da pošalješ ponudu.`}</p>` : ''}
