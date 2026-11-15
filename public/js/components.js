@@ -367,8 +367,9 @@ function toJpeg(src, max, q) {
 }
 export async function uploadFile(file) {
   const bmp = await loadImage(file);
-  const full = toJpeg(bmp, 1600, 0.82);
-  const th = toJpeg(bmp, 420, 0.75);
+  // 1280 px i jača kompresija: na telefonu se ne vidi razlika, a zauzima oko upola manje mjesta
+  const full = toJpeg(bmp, 1280, 0.76);
+  const th = toJpeg(bmp, 420, 0.72);
   const r = await api('/api/upload', { body: { full, thumb: th } });
   return r.url;
 }
