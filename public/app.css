@@ -485,3 +485,8 @@ details.fold[open] summary svg{transform:rotate(90deg)}
 .num.red{background:#D92D20;color:#fff}
 .admin-btn{gap:6px}
 .admin-btn .num{margin-left:4px}
+
+.bill3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%}
+.bill3 span{background:var(--bg);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column}
+.bill3 small{font-size:12px;color:var(--muted)}
+.bill3 b{font-size:16px}

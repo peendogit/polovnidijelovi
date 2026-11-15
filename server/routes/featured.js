@@ -33,7 +33,7 @@ app.post('/api/featured/request', async ({ user, body }) => {
   const pack = featuredPrices().find(p => p.days === int(body.days));
   if (!pack) throw bad('Izaberi paket');
   if (get("SELECT 1 x FROM featured_requests WHERE kind=? AND item_id=? AND status='new'", kind, id)) throw bad('Zahtjev za ovaj oglas je već poslan — javićemo ti se');
-  run('INSERT INTO featured_requests (kind, item_id, user_id, days, price) VALUES (?,?,?,?,?)', kind, id, user.id, pack.days, pack.price);
+  run('INSERT INTO featured_requests (kind, item_id, user_id, days, price, paid) VALUES (?,?,?,?,?,0)', kind, id, user.id, pack.days, pack.price);
   // javi administratorima
   const admins = all('SELECT email FROM users WHERE is_admin=1 AND blocked=0');
   for (const a of admins) sendMail(a.email, 'Novi zahtjev: istaknuti oglas', 'Istaknuti oglas',
@@ -54,14 +54,18 @@ app.get('/api/admin/featured', () => ({
   ],
   prices: featuredPrices(),
   pay_info: setting('featured_pay_info', DEF_PAY),
-  earned_30d: get("SELECT COALESCE(SUM(price),0) s FROM featured_requests WHERE status='done' AND done_at > datetime('now','-30 days')").s,
+  earned_30d: get("SELECT COALESCE(SUM(price),0) s FROM featured_requests WHERE status='done' AND paid=1 AND paid_at > datetime('now','-30 days')").s,
+  owed: get("SELECT COALESCE(SUM(price),0) s FROM featured_requests WHERE status='done' AND paid=0").s,
 }), A);
 
 app.post('/api/admin/featured/:id', ({ params, body }) => {
   const f = get("SELECT * FROM featured_requests WHERE id=? AND status='new'", int(params.id));
   if (!f) throw notFound();
-  if (body.action === 'approve') extend(f.kind, f.item_id, f.days);
-  run("UPDATE featured_requests SET status=?, done_at=datetime('now') WHERE id=?", body.action === 'approve' ? 'done' : 'rejected', f.id);
+  const ok = body.action === 'approve';
+  if (ok) extend(f.kind, f.item_id, f.days);
+  // odobreno: plaćeno odmah, ili duguje (plati kasnije)
+  const paid = ok && body.paid !== false ? 1 : 0;
+  run("UPDATE featured_requests SET status=?, done_at=datetime('now'), paid=?, paid_at=CASE WHEN ? THEN datetime('now') END WHERE id=?", ok ? 'done' : 'rejected', paid, paid, f.id);
   return { ok: true };
 }, A);
 
@@ -82,4 +86,40 @@ app.post('/api/admin/featured-settings', ({ body }) => {
   setSetting('featured_prices', JSON.stringify(prices));
   setSetting('featured_pay_info', str(body.pay_info, 1000) || DEF_PAY);
   return { ok: true };
+}, A);
+
+// ---------- naplata: ko je koliko potrošio, platio, duguje ----------
+app.get('/api/admin/billing', () => {
+  const sum = w => get(`SELECT COALESCE(SUM(price),0) s, COUNT(*) n FROM featured_requests WHERE status='done' ${w}`);
+  return {
+    totals: {
+      paid: sum('AND paid=1'), owed: sum('AND paid=0'),
+      month: sum("AND paid=1 AND paid_at >= datetime('now','start of month')"),
+      last_month: sum("AND paid=1 AND paid_at >= datetime('now','start of month','-1 month') AND paid_at < datetime('now','start of month')"),
+    },
+    users: all(`SELECT u.id, u.name, u.phone, u.type, COUNT(*) n, SUM(f.price) spent, SUM(CASE WHEN f.paid=1 THEN f.price ELSE 0 END) paid,
+        SUM(CASE WHEN f.paid=0 THEN f.price ELSE 0 END) owed, MAX(f.done_at) last
+      FROM featured_requests f JOIN users u ON u.id=f.user_id WHERE f.status='done' GROUP BY u.id ORDER BY owed DESC, spent DESC LIMIT 300`),
+    unpaid: all(`SELECT f.id, f.kind, f.item_id, f.days, f.price, f.done_at, u.id user_id, u.name, u.phone,
+        CASE f.kind WHEN 'vehicle' THEN (SELECT COALESCE(mk.name || ' ' || mo.name, v.model_text) || COALESCE(' ' || v.year, '') FROM vehicles v LEFT JOIN car_make mk ON mk.id=v.make_id LEFT JOIN car_model mo ON mo.id=v.model_id WHERE v.id=f.item_id)
+        ELSE (SELECT p.title FROM parts p WHERE p.id=f.item_id) END title
+      FROM featured_requests f JOIN users u ON u.id=f.user_id WHERE f.status='done' AND f.paid=0 ORDER BY f.done_at`),
+    recent: all(`SELECT f.id, f.price, f.days, f.paid_at, u.name FROM featured_requests f JOIN users u ON u.id=f.user_id
+      WHERE f.status='done' AND f.paid=1 ORDER BY f.paid_at DESC LIMIT 20`),
+  };
+}, A);
+
+// označi jednu stavku plaćenom (ili vrati na dug)
+app.post('/api/admin/billing/:id', ({ params, body }) => {
+  const f = get("SELECT id FROM featured_requests WHERE id=? AND status='done'", int(params.id));
+  if (!f) throw notFound();
+  const paid = body.paid === false ? 0 : 1;
+  run("UPDATE featured_requests SET paid=?, paid_at=CASE WHEN ? THEN datetime('now') END WHERE id=?", paid, paid, f.id);
+  return { ok: true };
+}, A);
+
+// korisnik platio sve što duguje
+app.post('/api/admin/billing/user/:id', ({ params }) => {
+  const n = run("UPDATE featured_requests SET paid=1, paid_at=datetime('now') WHERE user_id=? AND status='done' AND paid=0", int(params.id)).changes;
+  return { ok: true, n: Number(n) };
 }, A);

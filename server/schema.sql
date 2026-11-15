@@ -242,7 +242,9 @@ CREATE TABLE IF NOT EXISTS featured_requests (
   price REAL,
   status TEXT NOT NULL DEFAULT 'new',   -- new | done | rejected
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  done_at TEXT
+  done_at TEXT,
+  paid INTEGER NOT NULL DEFAULT 1,   -- 0 = duguje
+  paid_at TEXT
 );
 
 -- pretrage dijelova (za analitiku: šta se najviše traži, šta nije nađeno)

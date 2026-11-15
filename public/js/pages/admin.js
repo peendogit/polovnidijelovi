@@ -7,14 +7,14 @@ export async function adminPage({ el, params }) {
   await loadMe().catch(() => {});
   const ac = state.counts?.admin || {};
   const tab = params.tab || (ac.featured ? 'istaknuto' : 'pregled');
-  const tabs = [['pregled', 'Pregled'], ['trazeno', 'Najtraženije'], ['korisnici', 'Korisnici'], ['modeli', 'Modeli'], ['istaknuto', 'Istaknuto'], ['prijave', 'Prijave'], ['spam', 'Spam']];
+  const tabs = [['pregled', 'Pregled'], ['trazeno', 'Najtraženije'], ['korisnici', 'Korisnici'], ['modeli', 'Modeli'], ['istaknuto', 'Istaknuto'], ['naplata', 'Naplata'], ['prijave', 'Prijave'], ['spam', 'Spam']];
   render(el, html`
   <section class="page-head" style="padding-bottom:8px"><div class="row"><h1 style="padding-left:12px">Administracija</h1></div></section>
   <nav class="tabs">${tabs.map(t => { const n = { istaknuto: ac.featured, prijave: ac.reports, modeli: ac.models }[t[0]]; return html`<a href="/admin/${t[0]}" class="${t[0] === tab ? 'on' : ''}">${t[1]}${n ? html` <span class="num red">${n}</span>` : ''}</a>`; })}</nav>
   <div class="wrap" style="padding-top:14px" id="at"></div>`);
   $('.tabs .on', el)?.scrollIntoView({ inline: 'center', block: 'nearest' });
   const box = $('#at', el);
-  await ({ pregled: overview, trazeno: demand, korisnici: users, modeli: models, istaknuto: featured, prijave: reports, spam }[tab] || overview)(box);
+  await ({ pregled: overview, trazeno: demand, korisnici: users, modeli: models, istaknuto: featured, naplata: billing, prijave: reports, spam }[tab] || overview)(box);
 }
 
 async function overview(box) {
@@ -153,13 +153,13 @@ async function featured(box) {
   const url = (k, id) => (k === 'vehicle' ? '/vozilo/' : '/dio/') + id;
   const prices = [...d.prices, {}, {}].slice(0, 4);
   render(box, html`
-    <div class="stats" style="margin-bottom:14px"><div class="stat"><b>${d.requests.length}</b><span>Zahtjeva čeka</span></div><div class="stat"><b>${d.active.length}</b><span>Trenutno istaknuto</span></div><div class="stat"><b>${d.earned_30d} KM</b><span>Odobreno (30 dana)</span></div></div>
+    <div class="stats" style="margin-bottom:14px"><div class="stat"><b>${d.requests.length}</b><span>Zahtjeva čeka</span></div><div class="stat"><b>${d.active.length}</b><span>Trenutno istaknuto</span></div><div class="stat"><b>${d.earned_30d} KM</b><span>Plaćeno (30 dana)</span></div><div class="stat"><b style="color:${d.owed ? '#B42318' : 'inherit'}">${d.owed} KM</b><span>Duguju · <a href="/admin/naplata">Naplata</a></span></div></div>
     <h2 style="font-size:22px;margin:0 0 8px">Zahtjevi</h2>
-    <p class="hint" style="margin:0 0 8px">Pozovi korisnika, dogovori uplatu, pa kad stigne klikni „Odobri“ — oglas odmah ide na vrh.</p>
+    <p class="hint" style="margin:0 0 8px">Pozovi korisnika i dogovori uplatu. „Odobri — plaćeno“ ako je platio; „Odobri — duguje“ ako plaća kasnije (vidiš u tabu Naplata). Oglas odmah ide na vrh.</p>
     ${d.requests.length ? html`<div class="list">${d.requests.map(r => html`<div class="row-item" style="flex-direction:column;gap:6px">
       <div style="display:flex;justify-content:space-between;width:100%;gap:8px"><a href="${url(r.kind, r.item_id)}"><strong>${r.title || '(obrisan oglas)'}</strong></a><span class="hint">${ago(r.created_at)}</span></div>
       <span class="hint">${r.kind === 'vehicle' ? 'Vozilo' : 'Dio'} · <strong style="color:var(--text)">${r.days} dana · ${r.price} KM</strong> · ${r.user_name || ''} ${r.user_phone ? html`· <a href="tel:${r.user_phone}">${r.user_phone}</a>` : ''}</span>
-      <div style="display:flex;gap:6px"><button class="btn accent sm" data-fr="${r.id}" data-a="approve">Odobri (uplaćeno)</button><button class="btn ghost sm" data-fr="${r.id}" data-a="reject">Odbij</button></div>
+      <div style="display:flex;gap:6px"><button class="btn accent sm" data-fr="${r.id}" data-a="approve">Odobri — plaćeno</button><button class="btn line sm" data-fr="${r.id}" data-a="approve" data-owe="1">Odobri — duguje</button><button class="btn ghost sm" data-fr="${r.id}" data-a="reject">Odbij</button></div>
     </div>`)}</div>` : html`<div class="empty">Nema novih zahtjeva.</div>`}
     <h2 style="font-size:22px;margin:18px 0 8px">Trenutno istaknuto</h2>
     ${d.active.length ? html`<div class="list">${d.active.map(a => html`<div class="row-item" style="align-items:center">
@@ -171,7 +171,7 @@ async function featured(box) {
         <label class="f"><span>Cijena (KM)</span><input name="p${i}" inputmode="decimal" value="${p.price ?? ''}"></label></div>`)}
       <label class="f"><span>Šta korisnik vidi o uplati</span><textarea name="pay_info" rows="3">${d.pay_info}</textarea></label>
       <button class="btn dark block">Sačuvaj</button></form>`);
-  $$('[data-fr]', box).forEach(b => { b.onclick = async () => { try { await api('/api/admin/featured/' + b.dataset.fr, { body: { action: b.dataset.a } }); toast(b.dataset.a === 'approve' ? 'Odobreno — oglas je istaknut' : 'Odbijeno'); adminPage({ el: box.closest('main') || document.querySelector('#view'), params: { tab: 'istaknuto' } }); } catch (e) { fail(e); } }; });
+  $$('[data-fr]', box).forEach(b => { b.onclick = async () => { try { await api('/api/admin/featured/' + b.dataset.fr, { body: { action: b.dataset.a, paid: !b.dataset.owe } }); toast(b.dataset.a !== 'approve' ? 'Odbijeno' : b.dataset.owe ? 'Odobreno — upisano kao dug' : 'Odobreno i plaćeno'); adminPage({ el: box.closest('main') || document.querySelector('#view'), params: { tab: 'istaknuto' } }); } catch (e) { fail(e); } }; });
   $$('[data-un]', box).forEach(b => { b.onclick = async () => { const [kind, id] = b.dataset.un.split(':'); try { await api('/api/admin/feature', { body: { kind, id, days: 0 } }); toast('Skinuto'); featured(box); } catch (e) { fail(e); } }; });
   $('#fsF', box).onsubmit = async e => {
     e.preventDefault();
@@ -215,4 +215,38 @@ async function demand(box, days = 30) {
       <div class="dm-c"><strong>${p.views}</strong><small>pregleda</small></div></a>`)}</div>` : html`<div class="empty" style="padding:16px">Još nema podataka.</div>`}
     <p class="hint">Broje se pretrage posjetilaca (ne tvoje kao admina); ista pretraga istog posjetioca u 30 min broji se jednom. Podaci se čuvaju 90 dana.</p>`);
   $$('[data-days]', box).forEach(a => { a.onclick = e => { e.preventDefault(); demand(box, Number(a.dataset.days)); }; });
+}
+
+// ---------- naplata: potrošeno, plaćeno, dug ----------
+async function billing(box) {
+  const d = await api('/api/admin/billing');
+  const t = d.totals;
+  const url = (k, id) => (k === 'vehicle' ? '/vozilo/' : '/dio/') + id;
+  const KM = n => `${Math.round((n || 0) * 100) / 100} KM`;
+  render(box, html`
+    <div class="stats" style="margin-bottom:14px">
+      <div class="stat"><b style="color:${t.owed.s ? '#B42318' : 'inherit'}">${KM(t.owed.s)}</b><span>Duguju ukupno (${t.owed.n})</span></div>
+      <div class="stat"><b>${KM(t.month.s)}</b><span>Plaćeno ovaj mjesec</span></div>
+      <div class="stat"><b>${KM(t.last_month.s)}</b><span>Prošli mjesec</span></div>
+      <div class="stat"><b>${KM(t.paid.s)}</b><span>Plaćeno ukupno (${t.paid.n})</span></div>
+    </div>
+    <h2 class="dm-h" style="margin-top:0">Ko duguje</h2>
+    ${d.unpaid.length ? html`<div class="list">${d.unpaid.map(f => html`<div class="row-item" style="align-items:center">
+      <div class="info"><span class="t">${f.name} · <span style="color:#B42318">${KM(f.price)}</span></span>
+        <span class="s"><a href="${url(f.kind, f.item_id)}">${f.title || '(obrisan oglas)'}</a> · ${f.days} dana · ${fmtDate(f.done_at)}${f.phone ? html` · <a href="tel:${f.phone}">${f.phone}</a>` : ''}</span></div>
+      <button class="btn accent sm" data-pay="${f.id}">Platio</button></div>`)}</div>` : html`<div class="empty" style="padding:16px">Niko ništa ne duguje.</div>`}
+    <h2 class="dm-h">Po korisnicima</h2>
+    ${d.users.length ? html`<div class="list">${d.users.map(u => html`<div class="row-item" style="flex-direction:column;gap:6px">
+      <div style="display:flex;justify-content:space-between;width:100%;gap:8px"><strong>${u.name}</strong><span class="hint">${u.n}× istaknuto · zadnje ${fmtDate(u.last)}</span></div>
+      <div class="bill3"><span><small>Potrošio</small><b>${KM(u.spent)}</b></span><span><small>Platio</small><b>${KM(u.paid)}</b></span><span><small>Duguje</small><b style="color:${u.owed ? '#B42318' : 'inherit'}">${KM(u.owed)}</b></span></div>
+      ${u.owed ? html`<div style="display:flex;gap:6px">${u.phone ? html`<a class="btn line sm" href="tel:${u.phone}">Pozovi</a>` : ''}<button class="btn accent sm" data-payall="${u.id}" data-name="${u.name}" data-sum="${KM(u.owed)}">Platio sve (${KM(u.owed)})</button></div>` : ''}
+    </div>`)}</div>` : html`<div class="empty" style="padding:16px">Još niko nije istakao oglas.</div>`}
+    <h2 class="dm-h">Zadnje uplate</h2>
+    ${d.recent.length ? html`<div class="list">${d.recent.map(f => html`<div class="row-item" style="align-items:center">
+      <div class="info"><span class="t">${f.name}</span><span class="s">${f.days} dana · ${fmtDate(f.paid_at)}</span></div>
+      <strong>${KM(f.price)}</strong><button class="btn ghost sm" data-unpay="${f.id}" title="Greškom označeno">Poništi</button></div>`)}</div>` : html`<div class="empty" style="padding:16px">Još nema uplata.</div>`}`);
+  const act = async (url, body, msg) => { try { await api(url, { body }); toast(msg); await loadMe(); billing(box); } catch (e) { fail(e); } };
+  $$('[data-pay]', box).forEach(b => { b.onclick = () => act('/api/admin/billing/' + b.dataset.pay, { paid: true }, 'Upisano kao plaćeno'); });
+  $$('[data-unpay]', box).forEach(b => { b.onclick = async () => { if (await confirmBox('Vratiti ovu uplatu na dug?', 'Vrati')) act('/api/admin/billing/' + b.dataset.unpay, { paid: false }, 'Vraćeno na dug'); }; });
+  $$('[data-payall]', box).forEach(b => { b.onclick = async () => { if (await confirmBox(`${b.dataset.name} je platio sve (${b.dataset.sum})?`, 'Da, platio')) act('/api/admin/billing/user/' + b.dataset.payall, {}, 'Sve plaćeno'); }; });
 }

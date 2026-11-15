@@ -121,6 +121,9 @@ export function tx(fn) {
   catch (e) { db.exec('ROLLBACK'); throw e; }
 }
 
+// istaknuti: naplata (stari odobreni zahtjevi su bili plaćeni)
+if (!cols('featured_requests').includes('paid')) { db.exec('ALTER TABLE featured_requests ADD COLUMN paid INTEGER NOT NULL DEFAULT 1'); db.exec('ALTER TABLE featured_requests ADD COLUMN paid_at TEXT'); db.exec("UPDATE featured_requests SET paid_at=done_at WHERE status='done'"); }
+
 export function setting(key, def = null) {
   return get('SELECT value FROM settings WHERE key=?', key)?.value ?? def;
 }
