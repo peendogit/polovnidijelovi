@@ -166,12 +166,14 @@ async function featured(box) {
       <div class="info"><a href="${url(a.kind, a.id)}"><strong>${a.title}</strong></a><span class="hint">${a.kind === 'vehicle' ? 'Vozilo' : 'Dio'} · ${a.user_name} · do ${fmtDate(a.featured_until)}</span></div>
       <button class="btn ghost sm" data-un="${a.kind}:${a.id}">Skini</button></div>`)}</div>` : html`<div class="empty">Ništa nije istaknuto.</div>`}
     <p class="hint">Bilo koji oglas možeš istaknuti i sam: otvori oglas pa dole „Istakni (admin)“.</p>
+    <div class="card" style="margin-top:14px;display:flex;align-items:center;gap:10px"><span style="flex:1"><strong>Telegram obavijesti</strong><br><span class="hint">${d.telegram ? 'Uključeno — novi zahtjev ti stiže na Telegram.' : 'Nije podešeno (TELEGRAM_BOT_TOKEN i TELEGRAM_CHAT_ID u .env).'}</span></span>${d.telegram ? html`<button class="btn line sm" id="tgTest">Pošalji probu</button>` : ''}</div>
     <form class="card stack" id="fsF" style="margin-top:14px"><strong style="font-size:17px">Paketi i uputstvo za uplatu</strong>
       ${prices.map((p, i) => html`<div class="grid2"><label class="f"><span>Paket ${i + 1}: broj dana</span><input name="d${i}" inputmode="numeric" value="${p.days || ''}" placeholder="${i < 2 ? '' : 'prazno = nema'}"></label>
         <label class="f"><span>Cijena (KM)</span><input name="p${i}" inputmode="decimal" value="${p.price ?? ''}"></label></div>`)}
       <label class="f"><span>Šta korisnik vidi o uplati</span><textarea name="pay_info" rows="3">${d.pay_info}</textarea></label>
       <button class="btn dark block">Sačuvaj</button></form>`);
   $$('[data-fr]', box).forEach(b => { b.onclick = async () => { try { await api('/api/admin/featured/' + b.dataset.fr, { body: { action: b.dataset.a, paid: !b.dataset.owe } }); toast(b.dataset.a !== 'approve' ? 'Odbijeno' : b.dataset.owe ? 'Odobreno — upisano kao dug' : 'Odobreno i plaćeno'); adminPage({ el: box.closest('main') || document.querySelector('#view'), params: { tab: 'istaknuto' } }); } catch (e) { fail(e); } }; });
+  $('#tgTest', box)?.addEventListener('click', async () => { try { await api('/api/admin/telegram-test', { body: {} }); toast('Poslano — provjeri Telegram'); } catch (e) { fail(e); } });
   $$('[data-un]', box).forEach(b => { b.onclick = async () => { const [kind, id] = b.dataset.un.split(':'); try { await api('/api/admin/feature', { body: { kind, id, days: 0 } }); toast('Skinuto'); featured(box); } catch (e) { fail(e); } }; });
   $('#fsF', box).onsubmit = async e => {
     e.preventDefault();

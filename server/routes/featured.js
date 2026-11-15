@@ -3,6 +3,7 @@ import { app } from '../router.js';
 import { all, get, run, setting, setSetting } from '../db.js';
 import { bad, notFound, forbidden, str, int, rateLimit } from '../lib.js';
 import { sendMail, SITE_URL } from '../mail.js';
+import { telegram, telegramEnabled } from '../telegram.js';
 
 const A = { auth: true, admin: true };
 const DEF_PRICES = [{ days: 7, price: 3 }, { days: 30, price: 10 }];
@@ -34,7 +35,12 @@ app.post('/api/featured/request', async ({ user, body }) => {
   if (!pack) throw bad('Izaberi paket');
   if (get("SELECT 1 x FROM featured_requests WHERE kind=? AND item_id=? AND status='new'", kind, id)) throw bad('Zahtjev za ovaj oglas je već poslan — javićemo ti se');
   run('INSERT INTO featured_requests (kind, item_id, user_id, days, price, paid) VALUES (?,?,?,?,?,0)', kind, id, user.id, pack.days, pack.price);
-  // javi administratorima
+  // javi adminu na Telegram
+  const what = kind === 'vehicle'
+    ? get("SELECT COALESCE(mk.name || ' ' || mo.name, v.model_text) || COALESCE(' ' || v.year, '') t FROM vehicles v LEFT JOIN car_make mk ON mk.id=v.make_id LEFT JOIN car_model mo ON mo.id=v.model_id WHERE v.id=?", id)?.t
+    : get('SELECT title t FROM parts WHERE id=?', id)?.t;
+  telegram(`⭐ Novi zahtjev za isticanje\n\n${what || ''} (${kind === 'vehicle' ? 'vozilo' : 'dio'})\nPaket: ${pack.days} dana — ${pack.price} KM\nKorisnik: ${user.name}${user.phone ? ' · ' + user.phone : ''}\n\nOglas: ${link(kind, id)}\nOdobri: ${SITE_URL}/admin/istaknuto`);
+  // i emailom administratorima
   const admins = all('SELECT email FROM users WHERE is_admin=1 AND blocked=0');
   for (const a of admins) sendMail(a.email, 'Novi zahtjev: istaknuti oglas', 'Istaknuti oglas',
     `${user.name} (${user.phone || 'bez telefona'}) želi istaknuti oglas na ${pack.days} dana za ${pack.price} KM.`, 'Otvori administraciju', `${SITE_URL}/admin/istaknuto`).catch(() => {});
@@ -54,6 +60,7 @@ app.get('/api/admin/featured', () => ({
   ],
   prices: featuredPrices(),
   pay_info: setting('featured_pay_info', DEF_PAY),
+  telegram: telegramEnabled(),
   earned_30d: get("SELECT COALESCE(SUM(price),0) s FROM featured_requests WHERE status='done' AND paid=1 AND paid_at > datetime('now','-30 days')").s,
   owed: get("SELECT COALESCE(SUM(price),0) s FROM featured_requests WHERE status='done' AND paid=0").s,
 }), A);
@@ -122,4 +129,11 @@ app.post('/api/admin/billing/:id', ({ params, body }) => {
 app.post('/api/admin/billing/user/:id', ({ params }) => {
   const n = run("UPDATE featured_requests SET paid=1, paid_at=datetime('now') WHERE user_id=? AND status='done' AND paid=0", int(params.id)).changes;
   return { ok: true, n: Number(n) };
+}, A);
+
+// probna poruka na Telegram (dugme u adminu)
+app.post('/api/admin/telegram-test', async () => {
+  if (!telegramEnabled()) throw bad('Telegram nije podešen: u .env upiši TELEGRAM_BOT_TOKEN i TELEGRAM_CHAT_ID pa restartuj sajt.');
+  if (!await telegram('✅ polovnidijelovi.com: Telegram obavijesti rade.')) throw bad('Poruka nije poslana — provjeri token i chat ID.');
+  return { ok: true };
 }, A);
