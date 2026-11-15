@@ -7,8 +7,8 @@ export async function openDb(file) {
   } catch (e) {
     let Better;
     try { Better = (await import('better-sqlite3')).default; }
-    catch {
-      console.error(`\nOvaj Node.js (${process.versions.node}) nema ugrađeni SQLite.\nU folderu programa pokreni:  npm install\n(instalira better-sqlite3), pa ponovi komandu.\n`);
+    catch (err) {
+      console.error(`\nOvaj Node.js (${process.versions.node}) nema ugrađeni SQLite, a paket better-sqlite3 se ne može učitati.\nRazlog: ${err.message}\nPopravka:  cd /var/www/polovnidijelovi && npm install better-sqlite3\n(ako javi grešku sa "gyp"/"make":  apt-get install -y build-essential python3  pa ponovi)\n`);
       process.exit(1);
     }
     return new Better(file);
