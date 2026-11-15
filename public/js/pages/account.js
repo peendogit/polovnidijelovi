@@ -4,12 +4,17 @@ import { inquiryModal } from './parts.js';
 
 // ---------- prijava / registracija ----------
 // dugme "Nastavi sa Google" (samo kad je uključeno u .env)
-async function googleBtn(next) {
+// Google dugme prema Google-ovim pravilima izgleda (zvanični "G" logo sa Google servera)
+async function googleBtn(next, label = 'Prijavi se sa Google') {
   const meta = await getMeta();
   if (!meta.google) return '';
-  return html`<a class="btn gbtn big block" href="/api/auth/google/start${qs({ next: safeNext(next, '') || undefined })}">${icon('user', 20)} Nastavi sa Google nalogom</a>
-    <div class="or"><span>ili emailom</span></div>`;
+  return html`<div class="or"><span>ili</span></div>
+    <a class="gbtn" href="/api/auth/google/start${qs({ next: safeNext(next, '') || undefined })}">
+      <img src="https://developers.google.com/identity/images/g-logo.png" alt="" width="18" height="18" referrerpolicy="no-referrer">
+      <span>${label}</span></a>`;
 }
+// ako se logo ne učita, ostaje samo tekst
+const gLogoFallback = el => el.querySelectorAll('.gbtn img').forEach(im => { const hide = () => { im.remove(); }; if (im.complete && !im.naturalWidth) hide(); else im.addEventListener('error', hide, { once: true }); });
 
 export async function loginPage({ el, query }) {
   if (state.user) return go(safeNext(query.next, '/profil'), true);
@@ -19,14 +24,15 @@ export async function loginPage({ el, query }) {
   <form class="wrap stack" id="lf" style="padding-top:16px;max-width:520px;margin:0 auto">
     ${query.greska ? html`<div class="card" style="border:1.5px solid #F2B8B5;background:#FEF3F2;color:#8C1D13">${query.greska}</div>` : ''}
     <div class="card stack">
-      ${await googleBtn(query.next)}
       <label class="f"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
       <label class="f"><span>Lozinka</span><input name="password" type="password" autocomplete="current-password" required></label>
       <button class="btn accent big block">Prijavi se</button>
+      ${await googleBtn(query.next)}
     </div>
     <p style="text-align:center;margin:4px 0">Nemaš nalog? <a href="/registracija${qs({ next: query.next })}">Registruj se besplatno</a></p>
     <p style="text-align:center;margin:0"><a href="/zaboravljena-lozinka">Zaboravio si lozinku?</a></p>
   </form>`);
+  gLogoFallback(el);
   $('#lf', el).onsubmit = async e => {
     e.preventDefault();
     const b = e.submitter; busy(b, true, 'Prijavljujem…');
@@ -47,7 +53,6 @@ export async function registerPage({ el, query }) {
       <label><input type="radio" name="type" value="otpad" ${otpad ? 'checked' : ''}><strong>Auto otpad</strong><span>Imam registrovan auto otpad</span></label>
     </fieldset>
     <div class="card stack">
-      ${await googleBtn(query.next)}
       <label class="f req"><span id="nl">${otpad ? 'Naziv otpada' : 'Ime i prezime'}</span><input name="name" required autocomplete="name"></label>
       <label class="f req"><span>Broj telefona</span><input name="phone" type="tel" required autocomplete="tel" placeholder="06x xxx xxx"></label>
       <div class="grid2"><label class="check"><input type="checkbox" name="viber" checked> Imam Viber</label><label class="check"><input type="checkbox" name="whatsapp"> Imam WhatsApp</label></div>
@@ -56,11 +61,13 @@ export async function registerPage({ el, query }) {
       <label class="f req"><span>Email</span><input name="email" type="email" required autocomplete="email"></label>
       <label class="f req"><span>Lozinka (najmanje 6 znakova)</span><input name="password" type="password" minlength="6" required autocomplete="new-password"></label>
       <button class="btn accent big block">Napravi nalog</button>
+      ${await googleBtn(query.next, 'Registruj se sa Google')}
       <p class="hint" style="margin:0">Registracijom prihvataš <a href="/uslovi">uslove korištenja</a>.</p>
     </div>
     <p style="text-align:center">Već imaš nalog? <a href="/prijava${qs({ next: query.next })}">Prijavi se</a></p>
   </form>`);
   $$('input[name=type]', el).forEach(r => { r.onchange = () => { const o = r.value === 'otpad' && r.checked; $('#nl', el).textContent = o ? 'Naziv otpada' : 'Ime i prezime'; $('#adr', el).hidden = !o; }; });
+  gLogoFallback(el);
   $('#rf', el).onsubmit = async e => {
     e.preventDefault();
     const b = e.submitter; busy(b, true, 'Pravim nalog…');

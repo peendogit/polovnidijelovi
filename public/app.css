@@ -503,7 +503,8 @@ details.fold[open] summary svg{transform:rotate(90deg)}
 .vt-wrap .vt-prev{left:-14px}.vt-wrap .vt-next{right:-14px}
 
 /* Google prijava */
-.gbtn{background:#fff;border:1.5px solid var(--line2);color:var(--text);gap:10px}
-.gbtn:hover{border-color:var(--dark)}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:12px;min-height:48px;padding:0 16px;background:#fff;border:1px solid #747775;border-radius:24px;color:#1F1F1F;font-family:Roboto,Arial,sans-serif;font-weight:500;font-size:15px;text-decoration:none;letter-spacing:.2px}
+.gbtn:hover{background:#F8F9FA;box-shadow:0 1px 2px rgba(60,64,67,.3),0 1px 3px 1px rgba(60,64,67,.15);color:#1F1F1F}
+.gbtn img{width:20px;height:20px;flex-shrink:0}
 .or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:2px 0}
 .or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
