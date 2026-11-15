@@ -185,39 +185,36 @@ async function featured(box) {
   };
 }
 
-// ---------- najtraženiji dijelovi ----------
+// ---------- najtraženiji dijelovi: DIO + VOZILO ----------
 async function demand(box, days = 30) {
   const d = await api('/api/admin/demand?days=' + days);
   const bar = (n, max) => html`<span class="dm-bar"><i style="width:${Math.max(4, Math.round(n / (max || 1) * 100))}%"></i></span>`;
-  const list = (rows, label, extra) => {
+  const src = o => [o.searches ? `${o.searches} pretraga` : '', o.requests ? `${o.requests} „Tražim dio“` : ''].filter(Boolean).join(' · ');
+  const list = (rows, title, sub, count = o => o.n, extra) => {
     if (!rows.length) return html`<div class="empty" style="padding:16px">Još nema podataka.</div>`;
-    const max = rows[0].n;
-    return html`<div class="list">${rows.map((r, i) => html`<div class="row-item dm-row"><span class="dm-n">${i + 1}</span>
-      <div class="info"><span class="t">${label(r)}</span>${bar(r.n, max)}</div>
-      <div class="dm-c"><strong>${r.n}×</strong>${extra ? extra(r) : ''}</div></div>`)}</div>`;
+    const max = count(rows[0]);
+    return html`<div class="list">${rows.map((o, i) => html`<div class="row-item dm-row"><span class="dm-n">${i + 1}</span>
+      <div class="info"><span class="t">${title(o)}</span>${sub(o) ? html`<span class="s">${sub(o)}</span>` : ''}${bar(count(o), max)}</div>
+      <div class="dm-c"><strong>${count(o)}×</strong>${extra ? extra(o) : ''}</div></div>`)}</div>`;
   };
-  const none = r => (r.none ? html`<small class="dm-none">${r.none} bez rezultata</small>` : '');
-  const veh = r => [r.make_name, r.model].filter(Boolean).join(' ');
+  const none = o => (o.none ? html`<small class="dm-none">${o.none} bez rezultata</small>` : '');
   render(box, html`
     <div class="segtabs light" style="max-width:420px;margin-bottom:14px">${[7, 30, 90].map(n => html`<a href="#" data-days="${n}" class="${n === d.days ? 'on' : ''}">${n} dana</a>`)}</div>
     <div class="stats" style="margin-bottom:14px"><div class="stat"><b>${d.searches}</b><span>Pretraga dijelova</span></div>
-      <div class="stat"><b>${d.missing.reduce((a, r) => a + r.n, 0)}</b><span>Bez rezultata</span></div>
-      <div class="stat"><b>${d.requests.reduce((a, r) => a + r.n, 0)}</b><span>„Tražim dio“ zahtjeva</span></div></div>
-    <h2 class="dm-h">Najtraženiji dijelovi</h2>
-    ${list(d.types, r => r.title, none)}
-    <h2 class="dm-h">Traženo, a nema na sajtu</h2><p class="hint" style="margin:-4px 0 8px">Ovo kupci traže, a niko nema — vrijedi nabaviti ili objaviti.</p>
-    ${list(d.missing, r => [r.term || '(bez teksta)', veh(r)].filter(Boolean).join(' — '))}
+      <div class="stat"><b>${d.requests}</b><span>„Tražim dio“ zahtjeva</span></div></div>
+    <h2 class="dm-h">Najtraženije: dio za tačno vozilo</h2>
+    ${list(d.top, o => o.part, o => html`<strong style="color:var(--text)">${o.vehicle}</strong> · ${src(o)}`, undefined, none)}
+    <h2 class="dm-h">Traženo, a nema na sajtu</h2><p class="hint" style="margin:-4px 0 8px">Kupci ovo traže, a niko nema — vrijedi nabaviti ili objaviti.</p>
+    ${list(d.missing, o => o.part, o => (o.vehicle ? html`<strong style="color:var(--text)">${o.vehicle}</strong>` : 'bez izabranog vozila'), o => o.none)}
     <h2 class="dm-h">Najtraženija vozila</h2>
-    ${list(d.models, veh)}
-    <h2 class="dm-h">Šta kupci pišu u „Tražim dio“</h2>
-    ${list(d.requests, r => [r.part, veh(r)].filter(Boolean).join(' — '))}
-    <h2 class="dm-h">Tačan tekst pretrage</h2>
-    ${list(d.terms, r => r.term, none)}
+    ${list(d.vehicles, o => o.vehicle, src)}
+    <h2 class="dm-h">Traženo bez izabranog vozila</h2>
+    ${list(d.anyVehicle, o => o.part, src, undefined, none)}
     <h2 class="dm-h">Najgledaniji oglasi</h2>
     ${d.viewed.length ? html`<div class="list">${d.viewed.map((p, i) => html`<a class="row-item dm-row" href="/dio/${p.id}"><span class="dm-n">${i + 1}</span>
       <div class="info"><span class="t">${p.title}</span><span class="s">${[p.make_name, p.model_name || p.model_text].filter(Boolean).join(' ')}</span></div>
       <div class="dm-c"><strong>${p.views}</strong><small>pregleda</small></div></a>`)}</div>` : html`<div class="empty" style="padding:16px">Još nema podataka.</div>`}
-    <p class="hint">Broje se pretrage posjetilaca (ne tvoje kao admina); ista pretraga istog posjetioca u 30 min broji se jednom. Podaci se čuvaju 90 dana.</p>`);
+    <p class="hint">Spajaju se pretrage na sajtu i „Tražim dio“ zahtjevi. Tvoje pretrage kao admina se ne broje; ista pretraga istog posjetioca u 30 min broji se jednom.</p>`);
   $$('[data-days]', box).forEach(a => { a.onclick = e => { e.preventDefault(); demand(box, Number(a.dataset.days)); }; });
 }
 

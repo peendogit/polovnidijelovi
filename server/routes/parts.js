@@ -56,7 +56,7 @@ app.get('/api/parts', ({ query, ip, user }) => {
       const who = crypto.createHash('sha256').update(String(ip) + SALT).digest('hex').slice(0, 16);
       // isti posjetilac, ista pretraga u 30 min = jedna pretraga
       if (!get("SELECT 1 x FROM search_log WHERE who=? AND COALESCE(term,'')=COALESCE(?,'') AND COALESCE(make_id,'')=COALESCE(?,'') AND created_at > datetime('now','-30 minutes')", who, term, query.make || null)) {
-        run('INSERT INTO search_log (term, type_id, make_id, model, results, who) VALUES (?,?,?,?,?,?)', term, type?.id || null, str(query.make, 60), str(query.model, 80), r.total, who);
+        run('INSERT INTO search_log (term, type_id, make_id, model, gen_id, results, who) VALUES (?,?,?,?,?,?,?)', term, type?.id || null, str(query.make, 60), str(query.model, 80), str(query.gen, 60), r.total, who);
       }
     } catch (e) { console.error('search_log', e.message); }
   }

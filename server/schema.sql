@@ -255,6 +255,7 @@ CREATE TABLE IF NOT EXISTS search_log (
   type_id INTEGER,        -- tip dijela (ako je izabran ili prepoznat)
   make_id TEXT,
   model TEXT,
+  gen_id TEXT,
   results INTEGER,
   who TEXT,               -- skraćeni otisak IP-a (ne čuva se sama adresa)
   created_at TEXT NOT NULL DEFAULT (datetime('now'))

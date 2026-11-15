@@ -29,6 +29,7 @@ if (!cols('users').includes('email_verified')) {
   db.exec('UPDATE users SET email_verified=1'); // postojeći korisnici ostaju kako jesu
 }
 if (!cols('users').includes('google_sub')) { db.exec('ALTER TABLE users ADD COLUMN google_sub TEXT'); db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_users_google ON users(google_sub) WHERE google_sub IS NOT NULL'); }
+if (!cols('search_log').includes('gen_id')) db.exec('ALTER TABLE search_log ADD COLUMN gen_id TEXT');
 if (!cols('requests').includes('visibility')) db.exec("ALTER TABLE requests ADD COLUMN visibility TEXT NOT NULL DEFAULT 'otpadi'");
 if (!cols('requests').includes('show_phone')) db.exec('ALTER TABLE requests ADD COLUMN show_phone INTEGER NOT NULL DEFAULT 1');
 if (!cols('inquiries').includes('ip')) db.exec('ALTER TABLE inquiries ADD COLUMN ip TEXT');

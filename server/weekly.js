@@ -4,6 +4,7 @@
 import { all, get, setting, setSetting } from './db.js';
 import { sendMail, mailEnabled, SITE_URL } from './mail.js';
 import { telegram } from './telegram.js';
+import { demand } from './demand.js';
 
 const n = sql => get(sql).c;
 export function report() {
@@ -16,8 +17,10 @@ export function report() {
     `Upita prodavcima: ${n(`SELECT COUNT(*) c FROM inquiries WHERE created_at > ${w} AND spam=0`)}`,
     `Pretraga dijelova: ${n(`SELECT COUNT(*) c FROM search_log WHERE created_at > ${w}`)}`,
   ];
-  const top = all(`SELECT t.title, COUNT(*) c FROM search_log s JOIN part_types t ON t.id=s.type_id WHERE s.created_at > ${w} GROUP BY s.type_id ORDER BY c DESC LIMIT 5`);
-  if (top.length) lines.push('', 'Najtraženije: ' + top.map(r => `${r.title} (${r.c})`).join(', '));
+  const d = demand(7);
+  if (d.top.length) lines.push('', 'NAJTRAŽENIJE (dio — vozilo):', ...d.top.slice(0, 10).map((o, i) => `${i + 1}. ${o.part} — ${o.vehicle}: ${o.n}×${o.none ? ` (${o.none}× nije nađeno)` : ''}`));
+  if (d.missing.length) lines.push('', 'TRAŽENO, A NEMA NA SAJTU:', ...d.missing.slice(0, 7).map(o => `• ${o.part}${o.vehicle ? ' — ' + o.vehicle : ''}: ${o.none}×`));
+  if (d.vehicles.length) lines.push('', 'NAJTRAŽENIJA VOZILA:', ...d.vehicles.slice(0, 5).map((v, i) => `${i + 1}. ${v.vehicle}: ${v.n}×`));
   const owed = get("SELECT COALESCE(SUM(price),0) s, COUNT(*) c FROM featured_requests WHERE status='done' AND paid=0");
   const waiting = n("SELECT COUNT(*) c FROM featured_requests WHERE status='new'");
   lines.push('', `Isticanje: ${waiting} zahtjeva čeka · dug ${owed.s} KM (${owed.c})`);
