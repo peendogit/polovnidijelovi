@@ -6,7 +6,7 @@ import { partsPage, partPage } from './pages/parts.js';
 import { vehiclesPage, vehiclePage } from './pages/vehicles.js';
 import { requestsPage, newRequestPage, requestPage } from './pages/requests.js';
 import { postChoosePage, partFormPage, vehicleFormPage } from './pages/post.js';
-import { loginPage, registerPage, profilePage, sellersPage, sellerPage, verifyPage, forgotPage, resetPage, sendVerifyAgain } from './pages/account.js';
+import { loginPage, registerPage, completeProfilePage, profilePage, sellersPage, sellerPage, verifyPage, forgotPage, resetPage, sendVerifyAgain } from './pages/account.js';
 import { adminPage } from './pages/admin.js';
 
 route('/', homePage);
@@ -26,6 +26,7 @@ route('/objavi/vozilo', vehicleFormPage);
 route('/uredi/vozilo/:id', vehicleFormPage);
 route('/prijava', loginPage);
 route('/registracija', registerPage);
+route('/dovrsi-profil', completeProfilePage);
 route('/profil', profilePage);
 route('/profil/:tab', profilePage);
 route('/otpadi', sellersPage);
@@ -134,5 +135,9 @@ document.addEventListener('routechange', drawNav);
 // osvježi brojače svake 2 minute (nove poruke, ponude, zahtjevi)
 setInterval(() => { if (state.user && !document.hidden) loadMe(); }, 120e3);
 
+// prijavljen preko Google-a a bez telefona: prvo dopuni profil
+document.addEventListener('routechange', () => {
+  if (state.user && !state.user.phone && !location.pathname.startsWith('/dovrsi-profil') && !location.pathname.startsWith('/uslovi')) go('/dovrsi-profil?next=' + encodeURIComponent(location.pathname + location.search), true);
+});
 await loadMe();
 await dispatch();

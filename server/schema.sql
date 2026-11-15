@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS users (
   is_admin INTEGER DEFAULT 0,
   blocked INTEGER DEFAULT 0,
   api_key TEXT,
+  google_sub TEXT,
   seen_requests_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   last_login TEXT

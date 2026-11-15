@@ -501,3 +501,9 @@ details.fold[open] summary svg{transform:rotate(90deg)}
 .vt-wrap .g-arr{top:38%;align-items:center;justify-content:center}
 @media (max-width:759px){.vt-wrap .g-arr{display:none}}
 .vt-wrap .vt-prev{left:-14px}.vt-wrap .vt-next{right:-14px}
+
+/* Google prijava */
+.gbtn{background:#fff;border:1.5px solid var(--line2);color:var(--text);gap:10px}
+.gbtn:hover{border-color:var(--dark)}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:2px 0}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}

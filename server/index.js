@@ -22,6 +22,7 @@ import './routes/upload.js';
 import './routes/admin.js';
 import './routes/feed.js';
 import './routes/featured.js';
+import './routes/google.js';
 
 // pojednostavljene boje: stare vrijednosti prebaci u glavnu boju
 tx(() => { for (const [from, to] of Object.entries(COLOR_MERGE)) { run('UPDATE parts SET color=? WHERE color=?', to, from); run('UPDATE vehicles SET color=? WHERE color=?', to, from); } });
@@ -112,6 +113,7 @@ const server = http.createServer(async (req, res) => {
       const user = userFromToken(cookies.pd_s);
       if (m.route.auth && !user) throw new HttpError(401, 'Prijavi se');
       if (m.route.admin && !user?.is_admin) throw new HttpError(403, 'Samo za administratora');
+      if (m.route.verified && !user.phone) { const e = new HttpError(403, 'Prvo upiši broj telefona u profilu.'); e.code = 'phone'; throw e; }
       if (m.route.verified && !user.email_verified && mailEnabled()) {
         const e = new HttpError(403, 'Prvo potvrdi email — link smo ti poslali na ' + user.email + '. Ne vidiš ga? U profilu klikni „Pošalji ponovo“.');
         e.code = 'verify'; throw e;
@@ -131,6 +133,7 @@ const server = http.createServer(async (req, res) => {
       const out = await m.route.handler(ctx);
       const extra = { 'Cache-Control': 'no-store' };
       if (ctx.setCookie) extra['Set-Cookie'] = ctx.setCookie;
+      if (ctx.redirect) { res.writeHead(302, { Location: ctx.redirect, ...extra }); return res.end(); }
       return send(req, res, 200, out ?? { ok: true }, 'application/json; charset=utf-8', extra);
     }
 

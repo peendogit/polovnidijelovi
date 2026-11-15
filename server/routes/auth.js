@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { app } from '../router.js';
 import { get, run } from '../db.js';
 import { sendMail, mailEnabled, SITE_URL } from '../mail.js';
+import { googleEnabled } from './google.js';
 import { bad, hashPassword, checkPassword, makeToken, sessionCookie, rateLimit, str, bool, CITIES, COLORS } from '../lib.js';
 
 export const PUBLIC_USER = 'id, type, name, phone, viber, whatsapp, city, address, about, logo, ships, verified, created_at';
@@ -24,7 +25,8 @@ export function meOut(u) {
     };
     counts.admin_total = counts.admin.featured + counts.admin.reports + counts.admin.models;
   }
-  const { pass_hash, api_key, ...user } = u;
+  const { pass_hash, api_key, google_sub, ...user } = u;
+  user.google = !!google_sub;
   user.has_api_key = !!api_key;
   user.mail_enabled = mailEnabled();
   return { user, counts };
@@ -204,6 +206,7 @@ app.post('/api/me/api-key', ({ user }) => {
 
 app.get('/api/meta', () => ({
   cities: CITIES,
+  google: googleEnabled(),
   colors: COLORS,
   fuels: ['dizel', 'benzin', 'benzin + plin', 'hibrid', 'električni'],
   stats: {
@@ -213,3 +216,15 @@ app.get('/api/meta', () => ({
   },
 }));
 
+
+// dopuna profila poslije prve Google prijave (telefon, grad, vrsta naloga)
+app.post('/api/me/complete', ({ user, body }) => {
+  if (user.phone) throw bad('Profil je već popunjen');
+  const name = str(body.name, 80);
+  const phone = cleanPhone(body.phone);
+  if (!name) throw bad('Upiši ime / naziv');
+  if (!phone || phone.length < 6) throw bad('Upiši broj telefona — kupci i otpadi te zovu na njega');
+  run('UPDATE users SET name=?, phone=?, city=?, type=?, viber=?, whatsapp=? WHERE id=?',
+    name, phone, str(body.city, 60), body.type === 'otpad' ? 'otpad' : 'privatno', bool(body.viber), bool(body.whatsapp), user.id);
+  return meOut(get('SELECT * FROM users WHERE id=?', user.id));
+}, { auth: true });

@@ -1,15 +1,25 @@
-import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, setMe, loadMe, partUrl, safeNext } from '../core.js';
+import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, busy, setMe, loadMe, partUrl, safeNext, getMeta } from '../core.js';
 import { icon, partRow, vehicleRow, requestRow, listOr, citySelect, pager, pagedList, confirmBox, avatarUpload, contactButtons, verifiedBadge } from '../components.js';
 import { inquiryModal } from './parts.js';
 
 // ---------- prijava / registracija ----------
+// dugme "Nastavi sa Google" (samo kad je uključeno u .env)
+async function googleBtn(next) {
+  const meta = await getMeta();
+  if (!meta.google) return '';
+  return html`<a class="btn gbtn big block" href="/api/auth/google/start${qs({ next: safeNext(next, '') || undefined })}">${icon('user', 20)} Nastavi sa Google nalogom</a>
+    <div class="or"><span>ili emailom</span></div>`;
+}
+
 export async function loginPage({ el, query }) {
   if (state.user) return go(safeNext(query.next, '/profil'), true);
   setTitle('Prijava');
   render(el, html`
   <section class="page-head center"><div class="row"><h1>Prijava</h1></div></section>
   <form class="wrap stack" id="lf" style="padding-top:16px;max-width:520px;margin:0 auto">
+    ${query.greska ? html`<div class="card" style="border:1.5px solid #F2B8B5;background:#FEF3F2;color:#8C1D13">${query.greska}</div>` : ''}
     <div class="card stack">
+      ${await googleBtn(query.next)}
       <label class="f"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
       <label class="f"><span>Lozinka</span><input name="password" type="password" autocomplete="current-password" required></label>
       <button class="btn accent big block">Prijavi se</button>
@@ -37,6 +47,7 @@ export async function registerPage({ el, query }) {
       <label><input type="radio" name="type" value="otpad" ${otpad ? 'checked' : ''}><strong>Auto otpad</strong><span>Imam registrovan auto otpad</span></label>
     </fieldset>
     <div class="card stack">
+      ${await googleBtn(query.next)}
       <label class="f req"><span id="nl">${otpad ? 'Naziv otpada' : 'Ime i prezime'}</span><input name="name" required autocomplete="name"></label>
       <label class="f req"><span>Broj telefona</span><input name="phone" type="tel" required autocomplete="tel" placeholder="06x xxx xxx"></label>
       <div class="grid2"><label class="check"><input type="checkbox" name="viber" checked> Imam Viber</label><label class="check"><input type="checkbox" name="whatsapp"> Imam WhatsApp</label></div>
@@ -329,6 +340,37 @@ export async function resetPage({ el, params }) {
     e.preventDefault();
     const b = e.submitter; busy(b, true, 'Snimam…');
     try { setMe(await api('/api/auth/reset', { body: { token: params.token, password: e.target.password.value } })); toast('Lozinka promijenjena — prijavljen si'); go('/profil', true); }
+    catch (err) { fail(err); busy(b, false); }
+  };
+}
+
+// poslije prve prijave sa Google: telefon, grad, vrsta naloga
+export async function completeProfilePage({ el, query }) {
+  if (!state.user) return go('/prijava', true);
+  if (state.user.phone) return go(safeNext(query.next, '/'), true);
+  setTitle('Dovrši profil');
+  const u = state.user;
+  render(el, html`
+  <section class="page-head center"><div class="row"><h1>Još samo korak</h1></div><p class="sub">Prijavljen si kao ${u.email}. Otpadi i kupci te zovu na broj telefona.</p></section>
+  <form class="wrap stack" id="cf" style="padding-top:16px;max-width:520px;margin:0 auto">
+    <fieldset class="seg"><legend class="sr">Vrsta naloga</legend>
+      <label><input type="radio" name="type" value="privatno" checked><strong>Privatno lice</strong><span>Kupujem ili prodajem pokoji dio</span></label>
+      <label><input type="radio" name="type" value="otpad"><strong>Auto otpad</strong><span>Imam registrovan auto otpad</span></label>
+    </fieldset>
+    <div class="card stack">
+      <label class="f req"><span id="nl">Ime i prezime</span><input name="name" required value="${u.name || ''}" autocomplete="name"></label>
+      <label class="f req"><span>Broj telefona</span><input name="phone" type="tel" required autocomplete="tel" placeholder="06x xxx xxx"></label>
+      <div class="grid2"><label class="check"><input type="checkbox" name="viber" checked> Imam Viber</label><label class="check"><input type="checkbox" name="whatsapp"> Imam WhatsApp</label></div>
+      <label class="f"><span>Grad</span>${await citySelect('city', '', 'Izaberi grad')}</label>
+      <button class="btn accent big block">Sačuvaj i nastavi</button>
+      <p class="hint" style="margin:0">Nastavkom prihvataš <a href="/uslovi">uslove korištenja</a>.</p>
+    </div>
+  </form>`);
+  $$('input[name=type]', el).forEach(r => { r.onchange = () => { $('#nl', el).textContent = r.value === 'otpad' && r.checked ? 'Naziv otpada' : 'Ime i prezime'; }; });
+  $('#cf', el).onsubmit = async e => {
+    e.preventDefault();
+    const b = e.submitter; busy(b, true, 'Snimam…');
+    try { setMe(await api('/api/me/complete', { body: formData(e.target) })); toast('Dobro došao!'); go(safeNext(query.next, null) || (state.user.type === 'otpad' ? '/objavi' : '/'), true); }
     catch (err) { fail(err); busy(b, false); }
   };
 }
