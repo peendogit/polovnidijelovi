@@ -5,6 +5,7 @@ import { all, get, run } from '../db.js';
 import { bad, notFound, str, int, bool, genLabel, hashPassword } from '../lib.js';
 import { clearCatalogCache } from './catalog.js';
 import { normPhone } from './inquiries.js';
+import { sendWeekly } from '../weekly.js';
 
 const A = { auth: true, admin: true };
 
@@ -158,4 +159,10 @@ app.get('/api/admin/demand', ({ query }) => {
     viewed: all(`SELECT p.id, p.title, p.views, k.name make_name, mo.name model_name, p.model_text FROM parts p LEFT JOIN car_make k ON k.id=p.make_id
       LEFT JOIN car_model mo ON mo.id=p.model_id WHERE p.status='active' AND p.views>0 ORDER BY p.views DESC LIMIT 15`),
   };
+}, A);
+
+// pošalji sedmični izvještaj odmah (proba emaila)
+app.post('/api/admin/weekly-now', async () => {
+  if (!await sendWeekly(true)) throw bad('Email nije poslan — provjeri SMTP podešavanja (node --no-warnings tools/mail-test.js tvoj@email.com).');
+  return { ok: true };
 }, A);

@@ -21,7 +21,9 @@ async function overview(box) {
   const s = await api('/api/admin/stats');
   const items = [['Korisnika', s.users], ['Otpada', s.otpadi], ['Aktivnih dijelova', s.parts], ['Vozila za dijelove', s.vehicles], ['Otvorenih zahtjeva', s.requests],
     ['Ponuda ukupno', s.offers], ['Upita (30 dana)', s.inquiries], ['Novih korisnika (7 dana)', s.new_users_7d], ['Novih prijava', s.reports], ['Blokiranih (spam)', s.spam_blocked], ['Prijedloga modela', s.suggestions]];
-  render(box, html`<div class="stats">${items.map(([l, v]) => html`<div class="stat"><b>${v}</b><span>${l}</span></div>`)}</div>`);
+  render(box, html`<div class="stats">${items.map(([l, v]) => html`<div class="stat"><b>${v}</b><span>${l}</span></div>`)}</div>
+    <div class="card" style="margin-top:14px;display:flex;align-items:center;gap:10px"><span style="flex:1"><strong>Sedmični izvještaj na email</strong><br><span class="hint">Stiže svakog ponedjeljka ujutro. Drži i Brevo ključ aktivnim; ako slanje ne radi, javlja se na Telegram.</span></span><button class="btn line sm" id="wkNow">Pošalji sad</button></div>`);
+  $('#wkNow', box).onclick = async () => { try { await api('/api/admin/weekly-now', { body: {} }); toast('Poslano — provjeri email'); } catch (e) { fail(e); } };
 }
 
 async function users(box, q = {}) {

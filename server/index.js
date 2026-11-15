@@ -23,6 +23,7 @@ import './routes/admin.js';
 import './routes/feed.js';
 import './routes/featured.js';
 import './routes/google.js';
+import './weekly.js';
 
 // pojednostavljene boje: stare vrijednosti prebaci u glavnu boju
 tx(() => { for (const [from, to] of Object.entries(COLOR_MERGE)) { run('UPDATE parts SET color=? WHERE color=?', to, from); run('UPDATE vehicles SET color=? WHERE color=?', to, from); } });
