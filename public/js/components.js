@@ -239,37 +239,152 @@ export function crumbs(items) {
 
 // Slike preko cijelog ekrana: listanje prstom (ili strelicama), "nazad" zatvara
 export function lightbox(images, start = 0, onClose) {
+  // Sve pokrete radimo sami (bez skrolanja preglednika): dok je slika uvećana, ostaje zaključana —
+  // prst je samo pomjera; na drugu sliku se prelazi tek kad se vrati na normalnu veličinu.
   const lb = document.createElement('div');
   lb.className = 'lightbox';
   lb.setAttribute('role', 'dialog');
   lb.setAttribute('aria-label', 'Slike');
-  lb.innerHTML = html`<div class="lb-strip">${images.map((s, i) => html`<div class="lb-slide"><img src="${s}" alt="Slika ${i + 1}" ${Math.abs(i - start) > 1 ? raw('loading="lazy"') : ''}></div>`)}</div>
+  lb.innerHTML = html`<div class="lb-strip">${images.map((s, i) => html`<div class="lb-slide"><img src="${s}" alt="Slika ${i + 1}" draggable="false" ${Math.abs(i - start) > 1 ? raw('loading="lazy"') : ''}></div>`)}</div>
     <div class="lb-top"><span class="lb-n">${start + 1} / ${images.length}</span><button class="icon-btn lb-x" aria-label="Zatvori">${icon('x', 26, '#fff')}</button></div>
-    ${images.length > 1 ? html`<button class="icon-btn lb-prev" aria-label="Prethodna">${icon('back', 30, '#fff')}</button><button class="icon-btn lb-next" aria-label="Sljedeća">${icon('right', 30, '#fff')}</button>` : ''}`.s;
+    ${images.length > 1 ? html`<button class="icon-btn lb-prev" aria-label="Prethodna">${icon('back', 30, '#fff')}</button><button class="icon-btn lb-next" aria-label="Sljedeća">${icon('right', 30, '#fff')}</button>` : ''}
+    <div class="lb-hint">Dva prsta ili dupli dodir za uvećanje</div>`.s;
   document.body.appendChild(lb);
   document.body.style.overflow = 'hidden';
   const st = lb.querySelector('.lb-strip');
   const n = lb.querySelector('.lb-n');
-  const cur = () => Math.round(st.scrollLeft / st.clientWidth);
-  st.scrollLeft = start * st.clientWidth;
-  st.addEventListener('scroll', () => { n.textContent = `${cur() + 1} / ${images.length}`; }, { passive: true });
-  const to = i => st.scrollTo({ left: Math.max(0, Math.min(images.length - 1, i)) * st.clientWidth, behavior: 'smooth' });
+  const imgs = [...lb.querySelectorAll('.lb-slide img')];
+  let idx = Math.max(0, Math.min(images.length - 1, start));
+  let z = { s: 1, x: 0, y: 0 }; // uvećanje trenutne slike
+
+  const W = () => lb.clientWidth;
+  const place = (dx = 0, anim = true) => {
+    st.style.transition = anim ? 'transform .28s ease' : 'none';
+    st.style.transform = `translate3d(${-idx * W() + dx}px,0,0)`;
+  };
+  const applyZoom = (anim = false) => {
+    const im = imgs[idx];
+    im.style.transition = anim ? 'transform .2s ease' : 'none';
+    im.style.transform = `translate(${z.x}px,${z.y}px) scale(${z.s})`;
+    lb.classList.toggle('zoomed', z.s > 1.01);
+  };
+  const clamp = () => {
+    const im = imgs[idx];
+    const mx = Math.max(0, (im.offsetWidth * z.s - lb.clientWidth) / 2);
+    const my = Math.max(0, (im.offsetHeight * z.s - lb.clientHeight) / 2);
+    z.x = Math.max(-mx, Math.min(mx, z.x)); z.y = Math.max(-my, Math.min(my, z.y));
+  };
+  // uvećaj oko tačke (px, py) u odnosu na centar ekrana
+  const zoomAt = (ns, px, py) => {
+    ns = Math.max(1, Math.min(5, ns));
+    z.x = px - (px - z.x) * (ns / z.s); z.y = py - (py - z.y) * (ns / z.s); z.s = ns;
+    if (ns <= 1.01) z = { s: 1, x: 0, y: 0 };
+    clamp();
+  };
+  const resetZoom = () => { if (z.s !== 1) { z = { s: 1, x: 0, y: 0 }; applyZoom(true); } };
+  const go = i => {
+    const ni = Math.max(0, Math.min(images.length - 1, i));
+    if (ni !== idx) { resetZoom(); idx = ni; }
+    place(0, true);
+    n.textContent = `${idx + 1} / ${images.length}`;
+  };
+  place(0, false);
+
+  // ---------- prsti / miš ----------
+  const pts = new Map();
+  let g = null; // trenutni pokret
+  let lastTap = 0;
+  const rel = e => { const r = lb.getBoundingClientRect(); return [e.clientX - r.left - r.width / 2, e.clientY - r.top - r.height / 2]; };
+  st.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    st.setPointerCapture?.(e.pointerId);
+    pts.set(e.pointerId, [e.clientX, e.clientY]);
+    lb.querySelector('.lb-hint')?.remove();
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      g = { t: 'pinch', d: Math.hypot(a[0] - b[0], a[1] - b[1]), s: z.s, x: z.x, y: z.y, m: rel({ clientX: (a[0] + b[0]) / 2, clientY: (a[1] + b[1]) / 2 }) };
+      place(0, true);
+    } else if (pts.size === 1) {
+      g = { t: z.s > 1.01 ? 'pan' : 'swipe', sx: e.clientX, sy: e.clientY, x: z.x, y: z.y, time: Date.now(), moved: false };
+    }
+  });
+  st.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId) || !g) return;
+    pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (g.t === 'pinch' && pts.size >= 2) {
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      const m = rel({ clientX: (a[0] + b[0]) / 2, clientY: (a[1] + b[1]) / 2 });
+      z = { s: g.s, x: g.x + (m[0] - g.m[0]), y: g.y + (m[1] - g.m[1]) };
+      zoomAt(g.s * (d / g.d), m[0], m[1]);
+      applyZoom();
+    } else if (g.t === 'pan') {
+      z.x = g.x + (e.clientX - g.sx); z.y = g.y + (e.clientY - g.sy);
+      if (Math.abs(e.clientX - g.sx) + Math.abs(e.clientY - g.sy) > 6) g.moved = true;
+      clamp(); applyZoom();
+    } else if (g.t === 'swipe') {
+      const dx = e.clientX - g.sx, dy = e.clientY - g.sy;
+      if (Math.abs(dx) + Math.abs(dy) > 6) g.moved = true;
+      // na prvoj/zadnjoj slici povuci samo malo (otpor)
+      const edge = (idx === 0 && dx > 0) || (idx === images.length - 1 && dx < 0);
+      if (Math.abs(dx) > Math.abs(dy)) place(edge ? dx / 4 : dx, false);
+    }
+  });
+  const end = e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (!g) return;
+    if (g.t === 'pinch') {
+      if (pts.size === 1) { const [p] = [...pts.values()]; g = { t: z.s > 1.01 ? 'pan' : 'none', sx: p[0], sy: p[1], x: z.x, y: z.y, moved: true }; }
+      else g = null;
+      if (z.s < 1.05) { z = { s: 1, x: 0, y: 0 }; applyZoom(true); }
+      return;
+    }
+    if (g.t === 'swipe') {
+      const dx = e.clientX - g.sx, dy = e.clientY - g.sy, dt = Date.now() - g.time;
+      if (Math.abs(dx) > Math.abs(dy) && (Math.abs(dx) > W() * 0.18 || (Math.abs(dx) > 40 && dt < 250))) go(idx + (dx < 0 ? 1 : -1));
+      else if (dy > 120 && Math.abs(dy) > Math.abs(dx) * 1.5) close(); // povuci dole = zatvori
+      else place(0, true);
+    }
+    // dupli dodir: uvećaj na tom mjestu / vrati
+    if (!g.moved) {
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        const [px, py] = rel(e);
+        if (z.s > 1.01) z = { s: 1, x: 0, y: 0 }; else zoomAt(2.5, px, py);
+        applyZoom(true); lastTap = 0;
+      } else lastTap = now;
+    }
+    g = null;
+  };
+  st.addEventListener('pointerup', end);
+  st.addEventListener('pointercancel', end);
+  // točkić miša na računaru: uvećanje oko kursora
+  st.addEventListener('wheel', e => {
+    e.preventDefault();
+    const [px, py] = rel(e);
+    zoomAt(z.s * (e.deltaY < 0 ? 1.15 : 0.87), px, py);
+    applyZoom();
+  }, { passive: false });
+  const onResize = () => { place(0, false); clamp(); applyZoom(); };
+  window.addEventListener('resize', onResize);
+
   const onKey = e => {
-    if (e.key === 'ArrowRight') to(cur() + 1);
-    else if (e.key === 'ArrowLeft') to(cur() - 1);
+    if (e.key === 'ArrowRight') go(idx + 1);
+    else if (e.key === 'ArrowLeft') go(idx - 1);
     else if (e.key === 'Escape') close();
   };
   document.addEventListener('keydown', onKey);
   const close = pushOverlay(() => {
-    const i = cur();
     lb.remove();
     document.body.style.overflow = '';
     document.removeEventListener('keydown', onKey);
-    onClose?.(i);
+    window.removeEventListener('resize', onResize);
+    onClose?.(idx);
   });
   lb.querySelector('.lb-x').onclick = close;
-  lb.querySelector('.lb-prev')?.addEventListener('click', () => to(cur() - 1));
-  lb.querySelector('.lb-next')?.addEventListener('click', () => to(cur() + 1));
+  lb.querySelector('.lb-prev')?.addEventListener('click', () => go(idx - 1));
+  lb.querySelector('.lb-next')?.addEventListener('click', () => go(idx + 1));
 }
 
 // ---------- izbor vozila: marka → model → generacija ----------
