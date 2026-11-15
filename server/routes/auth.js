@@ -15,6 +15,15 @@ export function meOut(u) {
       ? get("SELECT COUNT(*) c FROM requests WHERE status='open' AND user_id<>? AND created_at > COALESCE(?, '1970')", u.id, u.seen_requests_at).c
       : 0,
   };
+  if (u.is_admin) {
+    // admin: šta čeka na odgovor (broj na dugmetu Admin i na tabovima)
+    counts.admin = {
+      featured: get("SELECT COUNT(*) c FROM featured_requests WHERE status='new'").c,
+      reports: get("SELECT COUNT(*) c FROM reports WHERE status='new'").c,
+      models: get("SELECT COUNT(*) c FROM model_suggestions WHERE status='new'").c,
+    };
+    counts.admin_total = counts.admin.featured + counts.admin.reports + counts.admin.models;
+  }
   const { pass_hash, api_key, ...user } = u;
   user.has_api_key = !!api_key;
   user.mail_enabled = mailEnabled();

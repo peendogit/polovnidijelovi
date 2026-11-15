@@ -481,3 +481,7 @@ details.fold summary::-webkit-details-marker{display:none}
 details.fold summary strong{flex:1}
 details.fold summary svg{transition:transform .15s;flex-shrink:0}
 details.fold[open] summary svg{transform:rotate(90deg)}
+
+.num.red{background:#D92D20;color:#fff}
+.admin-btn{gap:6px}
+.admin-btn .num{margin-left:4px}

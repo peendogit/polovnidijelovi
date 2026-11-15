@@ -1,15 +1,18 @@
-import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, getMakes } from '../core.js';
+import { html, raw, render, $, $$, api, go, qs, setTitle, formData, ago, fail, toast, state, getMakes, loadMe } from '../core.js';
 import { confirmBox, modal, fmtDate } from '../components.js';
 
 export async function adminPage({ el, params }) {
   if (!state.user?.is_admin) return go('/', true);
   setTitle('Administracija');
-  const tab = params.tab || 'pregled';
+  await loadMe().catch(() => {});
+  const ac = state.counts?.admin || {};
+  const tab = params.tab || (ac.featured ? 'istaknuto' : 'pregled');
   const tabs = [['pregled', 'Pregled'], ['trazeno', 'Najtraženije'], ['korisnici', 'Korisnici'], ['modeli', 'Modeli'], ['istaknuto', 'Istaknuto'], ['prijave', 'Prijave'], ['spam', 'Spam']];
   render(el, html`
   <section class="page-head" style="padding-bottom:8px"><div class="row"><h1 style="padding-left:12px">Administracija</h1></div></section>
-  <nav class="tabs">${tabs.map(t => html`<a href="/admin/${t[0]}" class="${t[0] === tab ? 'on' : ''}">${t[1]}</a>`)}</nav>
+  <nav class="tabs">${tabs.map(t => { const n = { istaknuto: ac.featured, prijave: ac.reports, modeli: ac.models }[t[0]]; return html`<a href="/admin/${t[0]}" class="${t[0] === tab ? 'on' : ''}">${t[1]}${n ? html` <span class="num red">${n}</span>` : ''}</a>`; })}</nav>
   <div class="wrap" style="padding-top:14px" id="at"></div>`);
+  $('.tabs .on', el)?.scrollIntoView({ inline: 'center', block: 'nearest' });
   const box = $('#at', el);
   await ({ pregled: overview, trazeno: demand, korisnici: users, modeli: models, istaknuto: featured, prijave: reports, spam }[tab] || overview)(box);
 }
@@ -168,7 +171,7 @@ async function featured(box) {
         <label class="f"><span>Cijena (KM)</span><input name="p${i}" inputmode="decimal" value="${p.price ?? ''}"></label></div>`)}
       <label class="f"><span>Šta korisnik vidi o uplati</span><textarea name="pay_info" rows="3">${d.pay_info}</textarea></label>
       <button class="btn dark block">Sačuvaj</button></form>`);
-  $$('[data-fr]', box).forEach(b => { b.onclick = async () => { try { await api('/api/admin/featured/' + b.dataset.fr, { body: { action: b.dataset.a } }); toast(b.dataset.a === 'approve' ? 'Odobreno — oglas je istaknut' : 'Odbijeno'); featured(box); } catch (e) { fail(e); } }; });
+  $$('[data-fr]', box).forEach(b => { b.onclick = async () => { try { await api('/api/admin/featured/' + b.dataset.fr, { body: { action: b.dataset.a } }); toast(b.dataset.a === 'approve' ? 'Odobreno — oglas je istaknut' : 'Odbijeno'); adminPage({ el: box.closest('main') || document.querySelector('#view'), params: { tab: 'istaknuto' } }); } catch (e) { fail(e); } }; });
   $$('[data-un]', box).forEach(b => { b.onclick = async () => { const [kind, id] = b.dataset.un.split(':'); try { await api('/api/admin/feature', { body: { kind, id, days: 0 } }); toast('Skinuto'); featured(box); } catch (e) { fail(e); } }; });
   $('#fsF', box).onsubmit = async e => {
     e.preventDefault();

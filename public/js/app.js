@@ -51,7 +51,7 @@ function termsPage({ el }) {
 // ---------- meni ----------
 function navItems() {
   const u = state.user, c = state.counts || {};
-  const prof = (c.inquiries || 0) + (c.offers || 0);
+  const prof = (c.inquiries || 0) + (c.offers || 0) + (c.admin_total || 0);
   return [
     ['/dijelovi', 'search', 'Traži', 0],
     ['/vozila', 'car', 'Vozila', 0],
@@ -82,6 +82,7 @@ function drawNav() {
     <a href="/vozila" class="${on('/vozila') ? 'on' : ''}">Vozila za dijelove</a>
     <a href="/trazim" class="${on('/trazim') ? 'on' : ''}">Tražim dio${state.user?.type === 'otpad' && state.counts.requests ? html` <span class="num">${state.counts.requests}</span>` : ''}</a>
     <a href="/otpadi" class="${on('/otpadi') ? 'on' : ''}">Otpadi</a>
+    ${state.user?.is_admin ? html`<a href="/admin" class="${on('/admin') ? 'on' : ''}">Admin${state.counts.admin_total ? html` <span class="num red">${state.counts.admin_total}</span>` : ''}</a>` : ''}
     ${state.user ? html`<a href="/profil" class="${on('/profil') ? 'on' : ''}">Profil${(state.counts.inquiries || 0) + (state.counts.offers || 0) ? html` <span class="num">${(state.counts.inquiries || 0) + (state.counts.offers || 0)}</span>` : ''}</a>` : html`<a href="/prijava">Prijava</a>`}
     <a href="/objavi" class="cta">+ Objavi</a>`);
 }
@@ -98,7 +99,7 @@ function openDrawer() {
     <hr>
     <a href="/objavi">${icon('plus')} Objavi oglas</a>
     ${u ? html`<a href="/profil">${icon('user')} Moj profil</a>
-      ${u.is_admin ? html`<a href="/admin">${icon('shield')} Administracija</a>` : ''}
+      ${u.is_admin ? html`<a href="/admin">${icon('shield')} Administracija${state.counts.admin_total ? html` <span class="num red">${state.counts.admin_total}</span>` : ''}</a>` : ''}
       <button class="it" id="dlo">${icon('logout')} Odjavi se</button>`
       : html`<a href="/prijava">${icon('user')} Prijava</a><a href="/registracija">${icon('plus')} Registracija</a>`}
     ${pwa.installed ? '' : html`<hr><button class="it" id="dinst">${icon('plus')} Instaliraj aplikaciju</button>`}

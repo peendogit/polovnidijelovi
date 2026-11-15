@@ -73,7 +73,7 @@ export async function profilePage({ el, params }) {
   setTitle('Moj profil');
   render(el, html`
   <section class="page-head" style="padding-bottom:12px">
-    <div class="row"><h1 style="padding-left:12px">${u.name}</h1>${u.is_admin ? html`<a class="btn accent sm" href="/admin">Admin</a>` : ''}</div>
+    <div class="row"><h1 style="padding-left:12px">${u.name}</h1>${u.is_admin ? html`<a class="btn accent sm admin-btn" href="/admin">Admin${state.counts.admin_total ? html`<span class="num red">${state.counts.admin_total}</span>` : ''}</a>` : ''}</div>
     <p class="sub" style="margin-bottom:0">${u.type === 'otpad' ? 'Auto otpad' : 'Privatni nalog'}${u.city ? ' · ' + u.city : ''} ${u.verified ? verifiedBadge(1) : ''}</p>
   </section>
   <nav class="tabs" aria-label="Profil">${tabs.map(t => html`<a href="/profil/${t[0]}" class="${t[0] === tab ? 'on' : ''}">${t[1]}${t[3] && state.counts[t[3]] ? html` <span class="num">${state.counts[t[3]]}</span>` : ''}</a>`)}</nav>
