@@ -10,7 +10,8 @@ export async function homePage({ el }) {
     <form class="card search-card" id="hs" role="search">
       <div id="hp" class="stack" style="gap:10px"></div>
       <label class="f"><span>Dio ili kataloški broj</span><input name="q" placeholder="far, branik, mjenjač…" autocomplete="off"></label><input type="hidden" name="type">
-      ${await filterFields({}, true)}
+      <button type="button" class="more-f" id="moreF" aria-expanded="false">${icon('sliders', 18)} Više filtera <span class="mf-arrow">${icon('right', 16)}</span></button>
+      <div id="hf" hidden>${await filterFields({}, true)}</div>
       <button class="btn accent big block">Pretraži</button>
     </form>
   </section>
@@ -31,6 +32,12 @@ export async function homePage({ el }) {
 
   const picker = await vehiclePicker($('#hp', el), {});
   const filters = bindFilters($('#hs', el), $('#hp', el), picker);
+  $('#moreF', el).onclick = e => {
+    const open = $('#hf', el).hidden;
+    $('#hf', el).hidden = !open;
+    e.currentTarget.setAttribute('aria-expanded', String(open));
+    e.currentTarget.classList.toggle('open', open);
+  };
   typeSuggest($('#hs input[name=q]', el), $('#hs input[name=type]', el));
   $('#hs', el).onsubmit = e => {
     e.preventDefault();

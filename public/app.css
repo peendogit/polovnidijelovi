@@ -511,3 +511,13 @@ details.fold[open] summary svg{transform:rotate(90deg)}
 .gbtn img{width:20px;height:20px;flex-shrink:0}
 .or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:2px 0}
 .or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* lozinka sa okom */
+.pw-wrap{position:relative;display:block}
+.pw-wrap input{width:100%;padding-right:48px}
+.pw-eye{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:44px;height:44px;border:0;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.pw-eye:hover{color:var(--text)}
+/* početna: dugme za dodatne filtere */
+.more-f{display:flex;align-items:center;gap:8px;align-self:flex-start;background:none;border:0;padding:6px 2px;min-height:40px;font-weight:700;font-size:15px;color:var(--text);cursor:pointer}
+.more-f .mf-arrow{display:inline-flex;transition:transform .15s}
+.more-f.open .mf-arrow{transform:rotate(90deg)}
