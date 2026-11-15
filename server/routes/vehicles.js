@@ -20,6 +20,8 @@ export function listVehicles(q, extraW = [], extraA = []) {
   if (q.color) { w.push('v.color=?'); a.push(String(q.color)); }
   if (q.color_code) { w.push('UPPER(v.color_code)=?'); a.push(String(q.color_code).trim().toUpperCase().slice(0, 20)); }
   if (q.seller) { w.push('v.user_id=?'); a.push(int(q.seller)); }
+  if (q.featured === 'yes') w.push("v.featured_until > datetime('now')");
+  if (q.featured === 'no') w.push("(v.featured_until IS NULL OR v.featured_until <= datetime('now'))");
   if (q.from) { w.push('v.year>=?'); a.push(int(q.from)); }
   if (q.to) { w.push('v.year<=?'); a.push(int(q.to)); }
   if (q.body) { w.push('v.body=?'); a.push(String(q.body)); }
@@ -28,7 +30,7 @@ export function listVehicles(q, extraW = [], extraA = []) {
   else if (q.gearbox === 'manuelni') w.push("v.gearbox LIKE 'manuelni%'");
   if (q.engine) { w.push('v.engine LIKE ?'); a.push(String(q.engine).slice(0, 4) + '%'); }
   for (const word of searchWords(q.q)) { w.push('v.search LIKE ?'); a.push(`%${word}%`); }
-  const order = q.sort === 'godiste' ? 'v.year DESC' : q.sort === 'godiste-' ? 'v.year ASC' : "(v.featured_until > datetime('now')) DESC, v.id DESC";
+  const order = q.sort === 'godiste' ? 'v.year DESC' : q.sort === 'godiste-' ? 'v.year ASC' : q.sort === 'novo' ? 'v.id DESC' : "(v.featured_until > datetime('now')) DESC, v.id DESC";
   const { limit, offset, page } = pageArgs(q);
   const r = countAndList(FROM, w, a, order, limit, offset, COLS);
   return { total: r.total, page, limit, items: r.items.map(fmtVehicleRow) };
@@ -114,7 +116,8 @@ app.get('/api/my/vehicles', ({ user, query }) => {
 app.get('/api/home', ({ user }) => ({
   parts: listParts({ limit: 8, sort: 'novo' }).items,
   featured: listParts({ featured: 1, limit: 8 }).items,
-  vehicles: listVehicles({ limit: 5 }).items,
+  // početna: sva istaknuta vozila + uvijek 5 najnovijih (npr. 4 istaknuta = 9 ukupno)
+  vehicles: [...listVehicles({ featured: 'yes', sort: 'novo', limit: 30 }).items, ...listVehicles({ featured: 'no', sort: 'novo', limit: 5 }).items],
   requests: all(`SELECT r.id, r.user_id, r.part, r.year, r.city, r.created_at, r.model_text, ${MODEL_COLS},
       (SELECT COUNT(*) FROM offers o WHERE o.request_id=r.id) offers
     FROM requests r ${MODEL_JOIN('r')} WHERE r.status='open' AND ${visibleWhere(user)[0]} ORDER BY r.id DESC LIMIT 5`, ...visibleWhere(user)[1]).map(x => publicReq(fmtVehicleRow(x), user)),

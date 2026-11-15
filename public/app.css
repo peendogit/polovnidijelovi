@@ -293,6 +293,8 @@ fieldset{border:0;margin:0;padding:0}
   .vgrid{grid-template-columns:1fr 1fr}
   .vcard .ph{aspect-ratio:4/3}
   .vtiles{grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));overflow:visible;margin:0;padding:0}
+  .vtiles.many{grid-auto-flow:column;grid-template-columns:none;grid-auto-columns:calc((100% - 40px) / 5);overflow-x:auto;scroll-padding:0}
+  .vt-wrap .g-arr{display:flex}
   .list.cols{display:grid;grid-template-columns:1fr 1fr}
   .list.cols .row-item{border-right:1px solid #ECEDEB}
   .stats{grid-template-columns:repeat(5,1fr)}
@@ -490,3 +492,8 @@ details.fold[open] summary svg{transform:rotate(90deg)}
 .bill3 span{background:var(--bg);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column}
 .bill3 small{font-size:12px;color:var(--muted)}
 .bill3 b{font-size:16px}
+
+.vt-wrap{position:relative}
+.vt-wrap .g-arr{top:38%;align-items:center;justify-content:center}
+@media (max-width:759px){.vt-wrap .g-arr{display:none}}
+.vt-wrap .vt-prev{left:-14px}.vt-wrap .vt-next{right:-14px}

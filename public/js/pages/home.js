@@ -43,7 +43,7 @@ export async function homePage({ el }) {
   render($('#hl', el), html`
     <section class="sec">
       <div class="sec-h"><h2>Najnovija vozila za dijelove</h2><a href="/vozila">Sva vozila</a></div>
-      ${d.vehicles.length ? html`<div class="vtiles">${d.vehicles.map(vehicleTile)}</div>`
+      ${d.vehicles.length ? html`<div class="vt-wrap">${d.vehicles.length > 5 ? html`<button type="button" class="g-arr vt-prev" aria-label="Nazad">${icon('back', 22, '#fff')}</button><button type="button" class="g-arr vt-next" aria-label="Dalje">${icon('right', 22, '#fff')}</button>` : ''}<div class="vtiles ${d.vehicles.length > 5 ? 'many' : ''}">${d.vehicles.map(vehicleTile)}</div></div>`
         : html`<div class="empty"><strong>Još nema vozila</strong>Otpadi: objavite vozila koja rastavljate.<div style="margin-top:12px"><a class="btn dark" href="/objavi/vozilo">Objavi vozilo</a></div></div>`}
     </section>
     ${d.featured?.length ? html`<section class="sec">
@@ -61,5 +61,11 @@ export async function homePage({ el }) {
       ${state.user?.type === 'otpad' ? '' : html`<p class="hint" style="margin:8px 2px 0">Imaš otpad? <a href="/registracija?tip=otpad">Registruj se</a> i odgovaraj kupcima sa cijenom.</p>`}
     </section>` : ''}
   `);
+  const vt = el.querySelector('.vtiles.many');
+  if (vt) {
+    const step = () => vt.querySelector('.vtile').offsetWidth + 10;
+    el.querySelector('.vt-prev').onclick = () => vt.scrollBy({ left: -step() * 2, behavior: 'smooth' });
+    el.querySelector('.vt-next').onclick = () => vt.scrollBy({ left: step() * 2, behavior: 'smooth' });
+  }
   el.querySelectorAll('.vtile img').forEach(im => { const full = () => { im.src = im.dataset.full; }; if (im.complete && !im.naturalWidth) full(); else im.addEventListener('error', full, { once: true }); });
 }
