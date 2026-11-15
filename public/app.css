@@ -474,3 +474,10 @@ img.thumb{object-fit:cover}
 .seg.light a{color:#3B414A}
 .seg.light a.on{background:var(--dark);color:#fff}
 .seg.light{grid-template-columns:repeat(3,1fr)}
+
+/* sklopivi okvir (npr. API u postavkama) */
+details.fold summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none;min-height:28px}
+details.fold summary::-webkit-details-marker{display:none}
+details.fold summary strong{flex:1}
+details.fold summary svg{transition:transform .15s;flex-shrink:0}
+details.fold[open] summary svg{transform:rotate(90deg)}

@@ -189,11 +189,12 @@ async function tabSettings(box) {
     <label class="f"><span>Nova lozinka</span><input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
     <button class="btn line block">Promijeni lozinku</button>
   </form>
-  ${u.type === 'otpad' ? html`<div class="card stack" style="margin-top:12px">
-    <strong style="font-size:17px">Automatsko slanje dijelova (API)</strong>
+  ${u.type === 'otpad' ? html`<details class="card fold" style="margin-top:12px">
+    <summary><strong style="font-size:17px">Automatsko slanje dijelova (API)</strong><span class="hint">${u.has_api_key ? 'ključ postoji' : 'nije podešeno'}</span>${icon('right', 18)}</summary>
+    <div class="stack" style="margin-top:10px">
     <p class="hint" style="margin:0">Ako dijelove vodiš u svom programu, on ih može sam slati ovdje. Daj ovaj ključ svom programeru — uputstvo je u README fajlu na GitHubu.</p>
     <div id="ak">${u.has_api_key ? html`<p style="margin:0">Ključ je napravljen. Novi ključ poništava stari.</p>` : ''}</div>
-    <button class="btn line block" id="akb">${u.has_api_key ? 'Napravi novi ključ' : 'Napravi API ključ'}</button></div>` : ''}
+    <button class="btn ${u.has_api_key ? 'danger' : 'line'} block" id="akb">${u.has_api_key ? 'Napravi novi ključ (stari prestaje raditi)' : 'Napravi API ključ'}</button></div></details>` : ''}
   <div class="card stack" style="margin-top:12px">
     <a class="btn line block" href="/prodavac/${u.id}">Kako drugi vide moj profil</a>
     <button class="btn danger block" id="lo">${icon('logout', 18)} Odjavi se</button>
@@ -226,7 +227,7 @@ async function tabSettings(box) {
     try { await api('/api/me/password', { body: formData(e.target) }); e.target.reset(); toast('Lozinka promijenjena'); } catch (err) { fail(err); }
   };
   $('#akb', box)?.addEventListener('click', async () => {
-    if (u.has_api_key && !await confirmBox('Napraviti novi ključ? Stari prestaje raditi.', 'Napravi')) return;
+    if (u.has_api_key && !await confirmBox('Napraviti novi ključ? Stari odmah prestaje raditi — program/shop koji šalje dijelove neće raditi dok mu ne upišeš novi ključ.', 'Da, napravi novi')) return;
     try {
       const r = await api('/api/me/api-key', { body: {} });
       render($('#ak', box), html`<label class="f"><span>Tvoj API ključ (sačuvaj ga — ne prikazuje se ponovo)</span><input readonly value="${r.api_key}" id="akv"></label>`);
