@@ -34,7 +34,7 @@ export async function registerPage({ el, query }) {
   <form class="wrap stack" id="rf" style="padding-top:16px;max-width:520px;margin:0 auto">
     <fieldset class="seg"><legend class="sr">Vrsta naloga</legend>
       <label><input type="radio" name="type" value="privatno" ${otpad ? '' : 'checked'}><strong>Privatno lice</strong><span>Kupujem ili prodajem pokoji dio</span></label>
-      <label><input type="radio" name="type" value="otpad" ${otpad ? 'checked' : ''}><strong>Auto otpad</strong><span>Prodajem dijelove i vozila</span></label>
+      <label><input type="radio" name="type" value="otpad" ${otpad ? 'checked' : ''}><strong>Auto otpad</strong><span>Imam registrovan auto otpad</span></label>
     </fieldset>
     <div class="card stack">
       <label class="f req"><span id="nl">${otpad ? 'Naziv otpada' : 'Ime i prezime'}</span><input name="name" required autocomplete="name"></label>

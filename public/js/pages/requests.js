@@ -11,7 +11,7 @@ export async function requestsPage({ el, query: q }) {
   <section class="page-head">
     <div class="row"><h1 style="padding-left:12px">Tražim dio</h1></div>
     <p class="sub">${mine ? 'Tvoji zahtjevi i ponude koje su ti otpadi poslali. Ponude vidiš samo ti.' : otpad ? 'Kupci traže ove dijelove. Pošalji ponudu sa cijenom — kupac te zove.' : 'Kupci objave šta traže, a otpadi im se javljaju sa cijenom.'}</p>
-    ${state.user ? html`<nav class="seg" aria-label="Zahtjevi">
+    ${state.user ? html`<nav class="segtabs" aria-label="Zahtjevi">
       <a href="/trazim" class="${mine ? '' : 'on'}">${icon('search', 18)} ${otpad ? 'Kupci traže' : 'Zahtjevi kupaca'}</a>
       <a href="/trazim?moji=1" class="${mine ? 'on' : ''}">${icon('user', 18)} Moji zahtjevi${newOffers ? html` <span class="num">${newOffers}</span>` : ''}</a>
     </nav>` : ''}

@@ -197,7 +197,7 @@ async function demand(box, days = 30) {
   const none = r => (r.none ? html`<small class="dm-none">${r.none} bez rezultata</small>` : '');
   const veh = r => [r.make_name, r.model].filter(Boolean).join(' ');
   render(box, html`
-    <div class="seg light" style="max-width:420px;margin-bottom:14px">${[7, 30, 90].map(n => html`<a href="#" data-days="${n}" class="${n === d.days ? 'on' : ''}">${n} dana</a>`)}</div>
+    <div class="segtabs light" style="max-width:420px;margin-bottom:14px">${[7, 30, 90].map(n => html`<a href="#" data-days="${n}" class="${n === d.days ? 'on' : ''}">${n} dana</a>`)}</div>
     <div class="stats" style="margin-bottom:14px"><div class="stat"><b>${d.searches}</b><span>Pretraga dijelova</span></div>
       <div class="stat"><b>${d.missing.reduce((a, r) => a + r.n, 0)}</b><span>Bez rezultata</span></div>
       <div class="stat"><b>${d.requests.reduce((a, r) => a + r.n, 0)}</b><span>„Tražim dio“ zahtjeva</span></div></div>
