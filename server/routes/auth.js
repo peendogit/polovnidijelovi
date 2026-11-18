@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
 import { app } from '../router.js';
-import { get, run } from '../db.js';
+import { get, run, all, tx, UPLOAD_DIR } from '../db.js';
 import { sendMail, mailEnabled, SITE_URL } from '../mail.js';
 import { googleEnabled } from './google.js';
+import fs from 'node:fs';
+import path from 'node:path';
 import { bad, hashPassword, checkPassword, makeToken, sessionCookie, rateLimit, str, bool, CITIES, COLORS } from '../lib.js';
 
 export const PUBLIC_USER = 'id, type, name, phone, viber, whatsapp, city, address, about, logo, ships, verified, created_at';
@@ -207,6 +209,9 @@ app.post('/api/me/api-key', ({ user }) => {
 app.get('/api/meta', () => ({
   cities: CITIES,
   google: googleEnabled(),
+  // za stranicu Privatnost (upisuje se u .env)
+  owner: process.env.SITE_OWNER || '',
+  contact: process.env.CONTACT_EMAIL || '',
   colors: COLORS,
   fuels: ['dizel', 'benzin', 'benzin + plin', 'hibrid', 'električni'],
   stats: {
@@ -227,4 +232,44 @@ app.post('/api/me/complete', ({ user, body }) => {
   run('UPDATE users SET name=?, phone=?, city=?, type=?, viber=?, whatsapp=? WHERE id=?',
     name, phone, str(body.city, 60), body.type === 'otpad' ? 'otpad' : 'privatno', bool(body.viber), bool(body.whatsapp), user.id);
   return meOut(get('SELECT * FROM users WHERE id=?', user.id));
+}, { auth: true });
+
+// Brisanje naloga (pravo na brisanje po Zakonu o zaštiti ličnih podataka):
+// briše nalog, oglase, vozila, zahtjeve, ponude, upite, sačuvane i slike oglasa
+app.post('/api/me/delete', (ctx) => {
+  const { user, body } = ctx;
+  rateLimit('del:' + user.id, 5, 3600e3);
+  if (user.is_admin) throw bad('Administrator ne može obrisati svoj nalog ovdje.');
+  const okPw = body.password && checkPassword(String(body.password).slice(0, 200), user.pass_hash);
+  const okWord = String(body.confirm || '').trim().toUpperCase().replace('Š', 'S') === 'OBRISI';
+  if (!okPw && !okWord) throw bad('Upiši lozinku (ili riječ OBRIŠI ako se prijavljuješ preko Google-a).');
+  const uid = user.id;
+  // slike oglasa (samo naše, sa ovog servera)
+  const files = [];
+  for (const t of ['parts', 'vehicles', 'requests']) {
+    for (const r of all(`SELECT images FROM ${t} WHERE user_id=?`, uid)) {
+      try { for (const u of JSON.parse(r.images || '[]')) if (/^\/uploads\/[\w.-]+$/.test(u)) files.push(u.slice(9)); } catch { /* */ }
+    }
+  }
+  if (user.logo && /^\/uploads\/[\w.-]+$/.test(user.logo)) files.push(user.logo.slice(9));
+  tx(() => {
+    run('DELETE FROM offers WHERE user_id=? OR request_id IN (SELECT id FROM requests WHERE user_id=?)', uid, uid);
+    run('DELETE FROM requests WHERE user_id=?', uid);
+    run("DELETE FROM favorites WHERE user_id=? OR (kind='part' AND item_id IN (SELECT id FROM parts WHERE user_id=?)) OR (kind='vehicle' AND item_id IN (SELECT id FROM vehicles WHERE user_id=?))", uid, uid, uid);
+    run('DELETE FROM inquiries WHERE to_user_id=?', uid);
+    run('UPDATE inquiries SET from_user_id=NULL WHERE from_user_id=?', uid);
+    run('DELETE FROM parts WHERE user_id=?', uid);
+    run('DELETE FROM vehicles WHERE user_id=?', uid);
+    run('DELETE FROM tokens WHERE user_id=?', uid);
+    run("DELETE FROM featured_requests WHERE user_id=? AND status='new'", uid);
+    run('UPDATE featured_requests SET user_id=NULL WHERE user_id=?', uid); // obračun ostaje (bez imena)
+    run('UPDATE reports SET user_id=NULL WHERE user_id=?', uid);
+    run('UPDATE model_suggestions SET user_id=NULL WHERE user_id=?', uid);
+    run('DELETE FROM users WHERE id=?', uid);
+  });
+  for (const f of files) {
+    for (const n of [f, f.replace(/\.(jpg|png|webp)$/, '_t.jpg')]) { try { fs.unlinkSync(path.join(UPLOAD_DIR, n)); } catch { /* */ } }
+  }
+  ctx.setCookie = sessionCookie('', ctx.secure); // odjava
+  return { ok: true };
 }, { auth: true });

@@ -62,7 +62,7 @@ export async function registerPage({ el, query }) {
       <label class="f req"><span>Lozinka (najmanje 6 znakova)</span><input name="password" type="password" minlength="6" required autocomplete="new-password"></label>
       <button class="btn accent big block">Napravi nalog</button>
       ${await googleBtn(query.next, 'Registruj se sa Google')}
-      <p class="hint" style="margin:0">Registracijom prihvataš <a href="/uslovi">uslove korištenja</a>.</p>
+      <p class="hint" style="margin:0">Registracijom prihvataš <a href="/uslovi">uslove korištenja</a> i <a href="/privatnost">politiku privatnosti</a>.</p>
     </div>
     <p style="text-align:center">Već imaš nalog? <a href="/prijava${qs({ next: query.next })}">Prijavi se</a></p>
   </form>`);
@@ -216,7 +216,21 @@ async function tabSettings(box) {
   <div class="card stack" style="margin-top:12px">
     <a class="btn line block" href="/prodavac/${u.id}">Kako drugi vide moj profil</a>
     <button class="btn danger block" id="lo">${icon('logout', 18)} Odjavi se</button>
-  </div>`);
+  </div>
+  ${u.is_admin ? '' : html`<details class="card fold" style="margin-top:12px">
+    <summary><strong style="font-size:17px">Obriši nalog</strong>${icon('right', 18)}</summary>
+    <form class="stack" id="delF" style="margin-top:10px">
+      <p class="hint" style="margin:0">Trajno se brišu nalog, svi tvoji oglasi i vozila sa slikama, zahtjevi, ponude, upiti i sačuvano. Ovo se ne može vratiti.</p>
+      ${u.google ? html`<label class="f"><span>Upiši riječ OBRIŠI za potvrdu</span><input name="confirm" autocomplete="off" placeholder="OBRIŠI"></label>`
+        : html`<label class="f"><span>Tvoja lozinka za potvrdu</span><input type="password" name="password" autocomplete="current-password" required></label>`}
+      <button class="btn danger block">Trajno obriši moj nalog</button>
+    </form></details>`}
+  <p class="hint" style="text-align:center;margin-top:12px"><a href="/privatnost">Privatnost i kolačići</a></p>`);
+  $('#delF', box)?.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!await confirmBox('Sigurno trajno obrisati nalog i sve oglase?', 'Obriši zauvijek')) return;
+    try { await api('/api/me/delete', { body: formData(e.target) }); setMe({ user: null, counts: {} }); toast('Nalog je obrisan'); go('/', true); } catch (err) { fail(err); }
+  });
   const f = $('#sf', box);
   $('#lgf', box).onchange = async e => {
     const file = e.target.files[0]; if (!file) return;
@@ -370,7 +384,7 @@ export async function completeProfilePage({ el, query }) {
       <div class="grid2"><label class="check"><input type="checkbox" name="viber" checked> Imam Viber</label><label class="check"><input type="checkbox" name="whatsapp"> Imam WhatsApp</label></div>
       <label class="f"><span>Grad</span>${await citySelect('city', '', 'Izaberi grad')}</label>
       <button class="btn accent big block">Sačuvaj i nastavi</button>
-      <p class="hint" style="margin:0">Nastavkom prihvataš <a href="/uslovi">uslove korištenja</a>.</p>
+      <p class="hint" style="margin:0">Nastavkom prihvataš <a href="/uslovi">uslove korištenja</a> i <a href="/privatnost">politiku privatnosti</a>.</p>
     </div>
   </form>`);
   $$('input[name=type]', el).forEach(r => { r.onchange = () => { $('#nl', el).textContent = r.value === 'otpad' && r.checked ? 'Naziv otpada' : 'Ime i prezime'; }; });

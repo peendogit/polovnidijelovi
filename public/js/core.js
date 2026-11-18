@@ -260,3 +260,17 @@ export const canInstall = () => !pwa.installed && (!!pwa.prompt || isIOS());
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }
+
+// ---------- kolačići: izbor posjetioca (čuva se u pregledniku 12 mjeseci) ----------
+// Neophodni (prijava, sigurnost, ovaj izbor) rade uvijek. Funkcionalni (npr. zapamti da si zatvorio traku "Instaliraj") samo uz pristanak.
+export const consent = {
+  get() { try { const c = JSON.parse(localStorage.getItem('pd_consent') || 'null'); return c && Date.now() - c.at < 365 * 864e5 ? c : null; } catch { return null; } },
+  set(func) {
+    try {
+      localStorage.setItem('pd_consent', JSON.stringify({ v: 1, func: !!func, at: Date.now() }));
+      if (!func) localStorage.removeItem('pd_inst_x'); // povuci pristanak = obriši funkcionalne
+    } catch { /* */ }
+    document.dispatchEvent(new CustomEvent('consentchange'));
+  },
+  func() { return !!this.get()?.func; },
+};

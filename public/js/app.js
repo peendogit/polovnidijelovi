@@ -1,5 +1,5 @@
 // polovnidijelovi.com — pokretanje aplikacije, meni, rute
-import { html, render, $, route, dispatch, loadMe, onMe, state, setTitle, api, go, toast, setMe, pushOverlay, pwa, canInstall } from './core.js';
+import { html, raw, render, $, route, dispatch, loadMe, onMe, state, setTitle, api, go, toast, setMe, pushOverlay, pwa, canInstall, consent, getMeta } from './core.js';
 import { icon, installApp } from './components.js';
 import { homePage } from './pages/home.js';
 import { partsPage, partPage } from './pages/parts.js';
@@ -34,9 +34,85 @@ route('/prodavac/:id', sellerPage);
 route('/admin', adminPage);
 route('/admin/:tab', adminPage);
 route('/uslovi', termsPage);
+route('/privatnost', privacyPage);
+route('/kolacici', privacyPage);
 route('/potvrdi/:token', verifyPage);
 route('/zaboravljena-lozinka', forgotPage);
 route('/nova-lozinka/:token', resetPage);
+
+// ---------- obavijest o kolačićima ----------
+function drawConsent() {
+  let b = $('#ckbar');
+  if (consent.get() || location.pathname === '/privatnost' || location.pathname === '/kolacici') { b?.remove(); return; }
+  if (b) return;
+  b = document.createElement('div'); b.id = 'ckbar'; b.className = 'ckbar'; b.setAttribute('role', 'dialog'); b.setAttribute('aria-label', 'Kolačići');
+  render(b, html`<div class="ck-in"><strong>Kolačići 🍪</strong>
+    <p>Koristimo <b>neophodne</b> kolačiće da bi prijava i sajt radili. Uz tvoj pristanak i <b>funkcionalne</b> (npr. pamtimo da si zatvorio obavijest). Ne koristimo kolačiće za praćenje ni reklame. <a href="/privatnost#kolacici">Više o tome</a></p>
+    <div class="ck-btns"><button class="btn accent" id="ckAll">Prihvati sve</button><button class="btn line" id="ckNec">Samo neophodni</button></div></div>`);
+  document.body.appendChild(b);
+  $('#ckAll', b).onclick = () => { consent.set(true); b.remove(); };
+  $('#ckNec', b).onclick = () => { consent.set(false); b.remove(); };
+}
+document.addEventListener('routechange', drawConsent);
+document.addEventListener('consentchange', drawConsent);
+
+// ---------- Politika privatnosti i kolačića ----------
+async function privacyPage({ el }) {
+  setTitle('Privatnost i kolačići');
+  const meta = await getMeta();
+  const c = consent.get();
+  const owner = meta.owner || 'vlasnik sajta polovnidijelovi.com';
+  const mail = meta.contact ? html`<a href="mailto:${meta.contact}">${meta.contact}</a>` : 'kontakt adresu navedenu na sajtu';
+  render(el, html`<section class="page-head"><div class="row"><h1 style="padding-left:12px">Privatnost i kolačići</h1></div><p class="sub">U skladu sa Zakonom o zaštiti ličnih podataka BiH („Sl. glasnik BiH“, br. 12/2025).</p></section>
+  <div class="wrap legal" style="padding-top:16px">
+    <div class="card stack" id="kolacici">
+      <h2>Tvoj izbor kolačića</h2>
+      <p>Trenutno: <strong>${!c ? 'nisi još izabrao' : c.func ? 'neophodni i funkcionalni' : 'samo neophodni'}</strong>. Izbor možeš promijeniti bilo kad.</p>
+      <div class="btns"><button class="btn accent" id="pAll">Dozvoli sve</button><button class="btn line" id="pNec">Samo neophodni</button></div>
+    </div>
+    <div class="card stack">
+      <h2>Koje kolačiće koristimo</h2>
+      <div class="tblwrap"><table class="tbl">
+        <tr><th>Naziv</th><th>Vrsta</th><th>Svrha</th><th>Traje</th></tr>
+        <tr><td>pd_s</td><td>neophodan</td><td>Prijava na nalog (da ostaneš prijavljen)</td><td>60 dana</td></tr>
+        <tr><td>pd_g</td><td>neophodan</td><td>Sigurnost prijave preko Google-a</td><td>10 minuta</td></tr>
+        <tr><td>pd_consent</td><td>neophodan</td><td>Pamti tvoj izbor kolačića</td><td>12 mjeseci</td></tr>
+        <tr><td>pd_inst_x</td><td>funkcionalan</td><td>Pamti da si zatvorio traku „Instaliraj aplikaciju“</td><td>14 dana</td></tr>
+      </table></div>
+      <p>Ne koristimo kolačiće za analitiku, praćenje ni reklame. Fontovi i sve ostalo učitavaju se sa našeg servera. Ako se prijavljuješ preko Google-a, Google koristi svoje kolačiće na svojoj stranici za prijavu, a na našoj prijavi se sa Google servera učitava njihov logo.</p>
+    </div>
+    <div class="card stack">
+      <h2>Ko obrađuje podatke</h2>
+      <p>Kontrolor podataka je ${owner}. Za sva pitanja i zahtjeve u vezi sa ličnim podacima piši na ${mail}.</p>
+      <h2>Koje podatke čuvamo i zašto</h2>
+      <ul>
+        <li><b>Nalog:</b> ime ili naziv, email, broj telefona, grad, adresa (otpadi), Viber/WhatsApp — da bi mogao objavljivati i da te kupci i prodavci mogu kontaktirati.</li>
+        <li><b>Oglasi i slike</b> koje objaviš — da bi bili vidljivi kupcima.</li>
+        <li><b>„Tražim dio“ i ponude</b> — vide ih samo otpadi i ti; brišu se automatski posle 15 dana.</li>
+        <li><b>Upiti</b> (ime, telefon, poruka) — šalju se prodavcu kojem pišeš.</li>
+        <li><b>IP adresa</b> — privremeno, za zaštitu od spama i zloupotrebe.</li>
+        <li><b>Pretrage</b> — bez tvoje IP adrese i bez imena, samo zbirno (šta se najviše traži); brišu se posle 90 dana.</li>
+      </ul>
+      <p>Pravni osnov: izvršenje usluge koju tražiš (nalog, oglasi, upiti) i legitimni interes (sigurnost sajta, zaštita od spama). Funkcionalni kolačići samo uz tvoj pristanak.</p>
+      <h2>Kome se podaci prosljeđuju</h2>
+      <ul>
+        <li><b>Contabo</b> (Njemačka) — server na kojem radi sajt.</li>
+        <li><b>Brevo</b> (EU) — slanje emailova (potvrda emaila, nova lozinka, obavijesti).</li>
+        <li><b>Google</b> — samo ako se prijaviš preko Google naloga.</li>
+        <li>Kupcima i prodavcima — ono što sam objaviš ili pošalješ (oglas, upit, ponuda, broj telefona).</li>
+      </ul>
+      <p>Podatke ne prodajemo i ne dajemo nikome za reklame.</p>
+      <h2>Koliko dugo</h2>
+      <p>Dok imaš nalog. Kad obrišeš nalog, brišu se nalog, oglasi, slike, zahtjevi, ponude i upiti. Sigurnosne kopije baze se čuvaju do 90 dana, pa se brišu same.</p>
+      <h2>Tvoja prava</h2>
+      <p>Imaš pravo da tražiš pristup svojim podacima, ispravku, brisanje, ograničenje obrade, prenos podataka i da prigovoriš obradi. Većinu podataka mijenjaš sam u Profil → Postavke, a nalog možeš obrisati u Profil → Postavke → „Obriši nalog“. Za ostalo piši na ${mail}. Ako smatraš da su ti prava povrijeđena, možeš se obratiti Agenciji za zaštitu ličnih podataka u Bosni i Hercegovini.</p>
+    </div>
+  </div>`);
+  const upd = f => { consent.set(f); toast('Sačuvano'); privacyPage({ el }); };
+  $('#pAll', el).onclick = () => upd(true);
+  $('#pNec', el).onclick = () => upd(false);
+  if (location.hash === '#kolacici') $('#kolacici', el).scrollIntoView();
+}
 
 function termsPage({ el }) {
   setTitle('Uslovi korištenja');
@@ -45,7 +121,7 @@ function termsPage({ el }) {
     <p style="margin:0">polovnidijelovi.com je oglasnik: povezuje kupce i prodavce polovnih auto dijelova. Sajt ne prodaje dijelove i nije strana u kupoprodaji.</p>
     <p style="margin:0">Za tačnost oglasa, stanje dijela, cijenu i garanciju odgovara prodavac. Prije plaćanja provjeri dio i prodavca. Ne šalji novac unaprijed nepoznatim osobama.</p>
     <p style="margin:0">Zabranjeno je objavljivati ukradene dijelove, lažne oglase i tuđe slike. Takvi oglasi i nalozi se brišu bez upozorenja.</p>
-    <p style="margin:0">Tvoje ime, grad i broj telefona vide kupci i prodavci kojima se javljaš. Email se ne prikazuje javno.</p>
+    <p style="margin:0">Tvoje ime, grad i broj telefona vide kupci i prodavci kojima se javljaš. Email se ne prikazuje javno. Više u <a href="/privatnost">Privatnost i kolačići</a>.</p>
   </div></div>`);
 }
 
@@ -125,7 +201,7 @@ function drawInstallBar() {
   render(b, html`<img src="/icons/kljuc-192.png" alt="" width="40" height="40"><div><strong>Polovni dijelovi na telefonu</strong><span>Brže otvaranje, ikona na početnom ekranu</span></div>
     <button class="btn accent sm" id="instb">Instaliraj</button><button class="icon-btn" id="instx" aria-label="Zatvori">${icon('x', 18, '#fff')}</button>`);
   $('#instb', b).onclick = installApp;
-  $('#instx', b).onclick = () => { try { localStorage.setItem('pd_inst_x', Date.now()); } catch { /* */ } b.remove(); };
+  $('#instx', b).onclick = () => { if (consent.func()) { try { localStorage.setItem('pd_inst_x', Date.now()); } catch { /* */ } } b.remove(); };
 }
 document.addEventListener('pwachange', drawInstallBar);
 setTimeout(drawInstallBar, 4000);
